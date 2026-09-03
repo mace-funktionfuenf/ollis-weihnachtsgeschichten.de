@@ -1,15 +1,3 @@
-# HTTP Basic Auth, gating the whole site while this is a staging domain.
-# The .htpasswd itself is generated/managed via Plesk's "Password-protected
-# Directories" GUI (no SSH needed to run htpasswd), not committed to git -
-# only this reference to its path is. Kept here (rather than left to Plesk's
-# own auto-injected .htaccess block) because this file is git-deployed on
-# every push and would otherwise wipe Plesk's injected auth on the next
-# deploy.
-AuthType Basic
-AuthName "Restricted"
-AuthUserFile /var/www/vhosts/kneipenkonzerte.de/static.ollis-weihnachtsgeschichten.de/public/.htpasswd
-Require valid-user
-
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
