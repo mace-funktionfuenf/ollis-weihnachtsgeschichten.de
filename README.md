@@ -127,214 +127,164 @@ here is bcrypt-hashed automatically — never hash it yourself before this call.
 
 ---
 
-## 2. Deploying to a webserver without SSH access
+## 2. Production deployment (Plesk on Wint.global)
 
-This assumes typical shared hosting: FTP/SFTP for files, a control panel (cPanel/Plesk/
-similar) with a **Cron Jobs** feature, phpMyAdmin for the database, and a MySQL
-database — but **no interactive shell**. Cron jobs matter a lot here: on almost every
-host that disables SSH, the cron job runner still exists and can execute an arbitrary
-CLI command (including `php artisan ...`) without ever giving you a shell. That's the
-core trick used throughout this section for anything you'd normally do with `artisan`
-on the server.
+The live site runs on **Plesk**, hosted by **Wint.global**, currently on the subdomain
+`static.ollis-weihnachtsgeschichten.de` (a soft-launch domain ahead of cutting the real
+apex domain over). **There is no SSH/terminal access on this plan** — everything below
+happens through Plesk's web panel. This section documents what's actually configured
+and the real problems hit setting it up, not a generic "some shared host" guide — if
+you ever move to a different host, §2.7's underlying idea (use whatever the control
+panel offers for one-off command execution — cron, a scheduled-task feature, anything
+that isn't a shell) still generalizes.
 
-### 2.1 Build the deployment package locally
+### 2.1 Git-based deployment (the actual mechanism)
 
-Never run `composer install` or `npm install` on the server — you don't have a shell to
-run them in anyway. Build everything locally and upload the result:
+Websites & Domains → the subdomain → **Git**:
 
-```bash
-composer install --no-dev --optimize-autoloader
-npm run build
-```
+- Repository: `https://github.com/mace-funktionfuenf/ollis-weihnachtsgeschichten.de.git`
+  — public, so no credentials/deploy keys needed — branch `main`.
+- Repository directory: the default (`httpdocs`) is fine; see §2.2 for why.
+- **"Additional deployment actions"** is the field that stands in for SSH here: a
+  shell script Plesk runs after every pull. Current script:
 
-Files/folders to upload via FTP (everything except what's below):
+  ```bash
+  /opt/plesk/php/8.4/bin/php artisan migrate --force
+  [ -L public/storage ] || /opt/plesk/php/8.4/bin/php artisan storage:link
+  /opt/plesk/php/8.4/bin/php artisan export:static
+  ```
 
-- **Exclude**: `.git/`, `node_modules/`, `tests/`, `.env` (see 2.4 — create it directly
-  on the server instead of uploading your local one), `database/database.sqlite`,
-  `public/cache/` (regenerated on the server, see 2.6), `public/build/` is **not**
-  excluded — that's the compiled Vite output you just built and it must be uploaded.
-- **Include everything else**, notably `vendor/` (since you can't run Composer on the
-  server) and `public/build/`.
+  The full PHP path (instead of bare `php`) is deliberate — see the version gotcha in
+  §2.3. `composer install` is deliberately *not* in this script; run it via Plesk's
+  separate **Composer** panel for the domain instead (Websites & Domains → the
+  subdomain → Composer) whenever `composer.lock` changes — a simpler, already-proven
+  path that doesn't risk `composer` not resolving inside the deployment shell.
+- Trigger a deploy either manually ("Pull updates" in the Git tool) or automatically —
+  the Git tool shows a webhook URL; add it under the GitHub repo's Settings → Webhooks
+  and every `git push` to `main` triggers a pull plus the script above with no manual
+  step at all.
 
-### 2.2 Where the document root points
+### 2.2 Document root
 
-Laravel's front controller lives at `public/index.php`, and the app's `.htaccess`
-(`public/.htaccess`) relies on `%{DOCUMENT_ROOT}` pointing at that same `public/`
-folder. Check which of these two situations your hosting gives you:
+Hosting Settings for the subdomain → **Document root** → `httpdocs/public`. Plesk lets
+the document root point at a subfolder of wherever the Git tool clones the repo, so
+`app/`, `vendor/`, `.env`, etc. physically sit inside `httpdocs` but are never
+web-reachable — no need for the split-directory trick a plain FTP host without this
+setting would require.
 
-**Scenario A — you can set the document root to a subfolder** (common for addon
-domains/subdomains in cPanel, or with a dedicated vhost). This is the easy case:
+### 2.3 PHP version
 
-1. Upload the whole project to any folder outside the web root, e.g.
-   `/home/youruser/ollis-weihnachtsgeschichten/`.
-2. In the control panel, point the domain's document root at
-   `/home/youruser/ollis-weihnachtsgeschichten/public`.
-3. Nothing else to change — `public/.htaccess` and `public/index.php` work as-is.
+PHP Settings for the subdomain → **8.4**. (`composer.json` says `^8.3`, but the
+current `composer.lock` was resolved against 8.4 and its generated
+`platform_check.php` enforces ≥8.4.1 specifically — match that, not the composer.json
+floor.)
 
-**Scenario B — the document root is fixed to `public_html/`** (typical on basic
-shared-hosting plans with no per-domain document-root setting). You have to split the
-app from the web root:
+**The gotcha that actually bit us:** this PHP Settings page only governs PHP-FPM for
+real HTTP requests — it does *not* change what a bare `php` resolves to in a Scheduled
+Task or the Git deployment-actions shell. We hit this directly: Composer built
+`vendor/` against 8.4 while a deployment action ran `artisan` under system PHP 8.2.32,
+producing a `platform_check.php` fatal error on every command. Always use the full CLI
+binary path instead of bare `php` in both those contexts. Find it via the
+`include_path` shown on the PHP Settings page (ours listed
+`/opt/plesk/php/8.4/share/pear`, confirming the binary lives at
+`/opt/plesk/php/8.4/bin/php`).
 
-1. Upload the project *except* the `public/` folder's contents to a directory **above**
-   the web root, e.g. `/home/youruser/app/` (a sibling of `public_html/`, not inside
-   it — this keeps `app/`, `.env`, `vendor/`, etc. unreachable from the web).
-2. Upload the *contents* of `public/` (not the folder itself) directly into
-   `public_html/` — so `public_html/index.php`, `public_html/.htaccess`,
-   `public_html/build/`, etc.
-3. Edit `public_html/index.php` — it now needs to reach one level *up and over* into
-   `app/` instead of one level up into a sibling `bootstrap/`/`vendor/`. Change:
+### 2.4 Database
 
-   ```php
-   if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
-   require __DIR__.'/../vendor/autoload.php';
-   $app = require_once __DIR__.'/../bootstrap/app.php';
-   ```
+Websites & Domains → the subdomain → **Databases** → create a database and a user.
 
-   to:
+**A second gotcha:** on this host the database runs on separate infrastructure from
+the webserver — `DB_HOST` is a real IP, not `localhost`. That's normal for
+Plesk-managed clustered hosting, not a misconfiguration. If you get
+`SQLSTATE[HY000] [1045] Access denied` despite a correct password, MySQL's error text
+doesn't distinguish "wrong password" from "this user isn't authorized from this host"
+— check that the database user is actually attached to that specific database (Plesk →
+the database → **Database Users** tab, not just present on the account generally) and
+that its allowed connection host covers wherever Plesk's PHP processes actually
+connect from (the error itself names it, e.g. `user@ha01s015.org-dns.com` — not
+`localhost`).
 
-   ```php
-   if (file_exists($maintenance = __DIR__.'/../app/storage/framework/maintenance.php')) {
-   require __DIR__.'/../app/vendor/autoload.php';
-   $app = require_once __DIR__.'/../app/bootstrap/app.php';
-   ```
+### 2.5 `.env`
 
-   (adjust `../app/` to whatever your actual sibling folder is named).
-4. `public_html/.htaccess` needs no change — `%{DOCUMENT_ROOT}` now correctly resolves
-   to `public_html/`, which is exactly what the `RewriteCond ... /cache%{REQUEST_URI}`
-   rule expects.
-
-Either way, confirm `mod_rewrite` is enabled (it is by default on virtually every
-cPanel host) — without it the static-cache rewrite and Laravel's pretty URLs both break.
-
-### 2.3 Database on the server
-
-Use MySQL in production, not SQLite — create a database and a dedicated DB user via
-the control panel's MySQL Databases tool, and note the host/name/user/password
-(usually `localhost` and a prefixed name like `youruser_ollis`).
-
-### 2.4 `.env` on the server
-
-Don't upload your local `.env`. Create a fresh one directly in the server's file
-manager (or FTP up a purpose-built production `.env`, never committed to git — it's in
-`.gitignore`) with at least:
+Created once via File Manager (into `httpdocs`) — it's gitignored, so it survives
+every future pull untouched.
 
 ```env
 APP_NAME="Ollis Weihnachtsgeschichten"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://ollis-weihnachtsgeschichten.de
-APP_KEY=                      # see below
+APP_URL=https://static.ollis-weihnachtsgeschichten.de
+APP_KEY=                    # generate locally: php artisan key:generate --show
+APP_LOCALE=de
+APP_FALLBACK_LOCALE=de
 
 DB_CONNECTION=mysql
-DB_HOST=localhost
-DB_PORT=3306
-DB_DATABASE=youruser_ollis
-DB_USERNAME=youruser_ollis
-DB_PASSWORD=
+DB_HOST=<the IP Plesk shows for this database>
+DB_DATABASE=<from §2.4>
+DB_USERNAME=<from §2.4>
+DB_PASSWORD=<from §2.4>
 
 SESSION_DRIVER=database
+SESSION_SECURE_COOKIE=true
 CACHE_STORE=database
 QUEUE_CONNECTION=database
-
 LOG_CHANNEL=stack
 LOG_LEVEL=error
 ```
 
-`APP_ENV=production` matters for the same reason noted in 1.3, but the other way:
-production is exactly the environment where you want Filament's normal
-`FilamentUser`/auth checks to apply without any local-only shortcut, so leave it as
-`production` and don't be tempted to set it to `local` on a live site.
+`App\Support\ContentHtml::externalLinksInNewTab()` (see §4) reads `APP_URL`'s host at
+runtime to decide which links count as "internal" — get this right here and that logic
+needs no separate update when the domain changes later (e.g. cutting over to the real
+apex domain).
 
-Generate `APP_KEY` locally (it must be a real random key, not left blank) and paste it
-in:
+### 2.6 SSL
 
-```bash
-php artisan key:generate --show
-```
+SSL/TLS Certificates, on the *subdomain's own* management page → Let's Encrypt →
+Install. A certificate already issued for the parent domain does not automatically
+cover a subdomain unless it's a wildcard — issue one specifically for
+`static.ollis-weihnachtsgeschichten.de` (or add it as a SAN).
 
-### 2.5 Running `artisan` commands on the server without SSH
+### 2.7 One-off commands without SSH: Scheduled Tasks
 
-Use the control panel's **Cron Jobs** page to run a one-off command, even though
-nothing here is actually meant to run on a schedule:
+The deployment-actions script in §2.1 covers everything that needs to run on *every*
+deploy. A few things only need to run **once** and don't belong in that repeating
+script — use Scheduled Tasks instead: Websites & Domains → the subdomain →
+**Scheduled Tasks** → Add Task → task type "Run a PHP script" → PHP version 8.4 →
+script = the path to `artisan` → arguments = the command. Most Plesk versions show a
+**"Run Now"** action once the task is saved, so it doesn't have to wait for its
+schedule. Check the run log for a clean exit, then **delete the task** — it was a
+one-shot, not a recurring job.
 
-1. Add a cron job with the command, e.g. (path to your PHP CLI binary varies by host —
-   check the control panel's PHP version selector, which usually shows the CLI path):
+Two commands actually needed this route so far:
 
-   ```bash
-   /usr/local/bin/php /home/youruser/app/artisan migrate --force
-   ```
+1. **`import:wordpress`** — populates Posts/Pages/Products/Categories/Redirects from
+   the WXR export (`ollisweihnachtsgeschichten.WordPress.2026-08-19.xml`, committed to
+   the repo, so it's already present after the Git pull with no separate upload
+   needed). Idempotent, but too expensive to run on every deploy, which is why it's
+   not in §2.1's script — re-run it by hand any time importer code changes in a way
+   that should backfill already-imported rows (e.g. adding `featured_image` support
+   required re-running this once against posts imported before that column existed).
+2. **Creating the first admin user** — see §3.3, including a third gotcha this
+   uncovered with the Arguments field itself.
 
-2. Set it to run once, a minute or two in the future (most UIs let you pick an exact
-   minute rather than only interval presets).
-3. Let it fire, then check the result (either a "last run" log the panel shows, or by
-   checking effects in phpMyAdmin — e.g. the `migrations` table now has rows).
-4. **Delete the cron job** immediately afterwards — it was a one-shot, not a recurring
-   task.
+### 2.8 The static cache after a deploy
 
-Use the same mechanism for any other one-off `artisan` command you'd normally run over
-SSH — `migrate`, `migrate:rollback`, `optimize`, `config:cache`, `import:wordpress`,
-`export:static`, or the Tinker commands used for user management in §3.2.
+`public/cache/` is gitignored — a `git push` deploys new code and templates but never
+touches the old pre-rendered HTML already sitting on the server from a previous
+`export:static` run. Since `export:static` is now in the repeating deployment script
+(§2.1), a normal deploy already regenerates it; if a page ever shows a mix of old and
+new content right after a deploy, that script either didn't run or failed partway —
+check its log in the Git tool.
 
-**If your host has no cron feature at all** (rare, but some ultra-basic plans), the
-fallback is a temporary, secret-gated web route. Add something like this to
-`routes/web.php`, deploy it, hit the URL once, then delete the route and redeploy:
-
-```php
-Route::get('/deploy-task-' . config('app.key'), function () {
-    Artisan::call('migrate', ['--force' => true]);
-    return Artisan::output();
-});
-```
-
-Never leave a route like this in place — it's a temporary tool, not a feature. Delete
-it and redeploy as the very next step after using it.
-
-### 2.6 The `storage` symlink (file uploads)
-
-Filament's `FileUpload` fields (e.g. the product image field in
-`app/Filament/Resources/ProductResource.php`) write to the `public` disk
-(`storage/app/public/...`), which is normally exposed at `public/storage` via a
-symlink created by `php artisan storage:link`. Symlinks are frequently unavailable or
-awkward over plain FTP. Two options, in order of preference:
-
-- Run `php artisan storage:link` once via the cron-job method in §2.5 — this is the
-  correct fix and works on any host where PHP's `symlink()` function isn't disabled
-  (most aren't).
-- If `symlink()` genuinely doesn't work on your host, set `FILESYSTEM_DISK=public` in
-  root and instead create `public_html/storage` (Scenario B) / `public/storage`
-  (Scenario A) as a **real folder** via FTP, matching the path Filament writes to. This
-  is a workaround, not the default Laravel setup — only fall back to it if the symlink
-  approach is confirmed broken on your specific host.
-
-### 2.7 First deploy: full checklist
-
-1. `composer install --no-dev --optimize-autoloader` and `npm run build` locally.
-2. Upload files per the layout chosen in §2.2.
-3. Create the MySQL database + user in the control panel.
-4. Create `.env` on the server per §2.4, with a real `APP_KEY`.
-5. Cron-run (§2.5): `artisan migrate --force`.
-6. Cron-run: `artisan storage:link` (§2.6).
-7. Cron-run: `artisan import:wordpress` — **only** if this is the initial data load
-   from the WXR export; skip on subsequent deploys.
-8. Cron-run: `artisan export:static` to populate `public/cache/` (subsequent content
-   edits regenerate this automatically via the Filament save observer — see the intro).
-9. Create your first admin user — see §3.3 below.
-10. Visit the site and `/admin`, confirm both load, confirm a known URL is served from
-    `public/cache/` (view source / check response headers for anything your host adds,
-    or just confirm it still renders correctly with the DB briefly unreachable).
-
-### 2.8 Redeploying updates
-
-For routine code/content changes after the first deploy:
-
-1. Build locally (`composer install --no-dev`, `npm run build` if assets changed).
-2. Upload changed files via FTP (skip `.env`, skip `public/cache/` — Filament saves
-   regenerate it, and a stale local copy would otherwise overwrite server content).
-3. Cron-run `artisan migrate --force` only if this release includes new migrations.
-4. If you changed anything Filament renders in bulk (a resource, a Blade view used by
-   the exporter) rather than through the admin UI itself, cron-run `artisan
-   export:static` to force a full re-render, since the observer only fires on actual
-   Filament saves.
+**Known gotcha, not yet fixed:** `public/.htaccess`'s trailing-slash redirect (strips
+a trailing `/` when the requested path isn't a real directory) runs *after* the
+static-cache check but *before* the front-controller fallback. A URL requested with a
+trailing slash that currently has no cache file gets redirected to the slash-less
+version — and that second, slash-less request can never match the cache rule (its path
+concatenation needs the trailing slash to form `cache/<slug>/index.html`), so it always
+falls through to a live Laravel render instead of ever getting a cached copy for that
+exact URL shape. Content still renders correctly either way, just without the
+static-cache performance benefit for that one URL until it's addressed.
 
 ---
 
@@ -369,20 +319,26 @@ in-panel way to create another one.
 
 ### 3.3 Add a user — production (no SSH)
 
-Two options; prefer the first.
+**Preferred: `app/Console/Commands/CreateAdminUser.php`** (`artisan admin:create`),
+built specifically for this. A raw Tinker one-liner run through Plesk's Scheduled
+Tasks "Arguments" field turned out to be fragile — a
+`tinker --execute="...(['name' => 'X', 'password' => 'Y'])..."` command silently lost
+its `password` value in transit (the resulting `INSERT` was missing that column
+entirely, no error raised). `admin:create` takes plain, quote-free `--flag=value`
+arguments instead, so there's nothing left for a panel's argument field to mangle:
 
-**Option A — cron-triggered Tinker** (§2.5 explains the general cron-job technique):
+Run once via Scheduled Tasks (§2.7):
 
-Add a one-off cron job running:
-
-```bash
-/usr/local/bin/php /home/youruser/app/artisan tinker --execute="\App\Models\User::create(['name' => 'Jane Doe', 'email' => 'jane@example.com', 'password' => 'a-strong-password']);"
+```
+Arguments: admin:create --name=Jane --email=jane@example.com --password=a-strong-password
 ```
 
-Let it fire once, confirm the row exists (phpMyAdmin → `users` table, or just try
-logging in at `/admin`), then delete the cron job.
+(Keep `--name` to a single word if you're not sure the field preserves spaces —
+`updateOrCreate()` runs underneath, keyed on email, so it's also safe to reuse later
+purely to reset a password.)
 
-**Option B — direct insert via phpMyAdmin** (if your host has no cron feature at all):
+**Fallback — direct insert via phpMyAdmin** (works on any host, no cron/scheduled-task
+feature required):
 
 1. Locally, generate a bcrypt hash for the intended password — never insert a plain
    password into the `password` column:
@@ -401,19 +357,21 @@ logging in at `/admin`), then delete the cron job.
 
 ### 3.4 Remove a user — production (no SSH)
 
-**Option A — cron-triggered Tinker:**
+**Option A — Tinker via Scheduled Tasks:**
 
-```bash
-/usr/local/bin/php /home/youruser/app/artisan tinker --execute="\App\Models\User::where('email', 'jane@example.com')->delete();"
+```
+Arguments: tinker --execute="\App\Models\User::where('email','jane@example.com')->delete();"
 ```
 
-Run once via cron, confirm, then delete the cron job.
+This one-liner has no `=>` array syntax and only one pair of quotes, so it's much less
+likely to hit the same mangling as the create case in §3.3 — but if it does, delete the
+row directly instead (Option B).
 
 **Option B — phpMyAdmin:** open the `users` table, find the row by `email`, delete it
 directly.
 
 As in local dev: always confirm at least one other working login exists before
-deleting a user, and delete/disable the cron job immediately after either operation —
+deleting a user, and delete the Scheduled Task immediately after either operation —
 it's a one-shot task, not something that should keep running.
 
 ---
@@ -421,12 +379,20 @@ it's a one-shot task, not something that should keep running.
 ## 4. Reference
 
 - `app/Console/Commands/ImportWordPress.php` — the WXR→Eloquent import and all
-  shortcode-resolution decisions.
+  shortcode-resolution decisions. `impressum` is explicitly skipped on re-import (real,
+  commissioned legal text now lives directly in the `pages` table, not derived from the
+  export) — see its inline comment before touching that logic.
+- `app/Console/Commands/CreateAdminUser.php` — non-interactive admin-user creation for
+  hosts without SSH; see §3.3 for why this exists instead of `make:filament-user`.
+- `app/Support/ContentHtml.php` — renders body HTML (post/page/product/shop) with
+  external links opening in a new tab, applied at render time so it covers both
+  imported WordPress content and anything written fresh in the RichEditor with one
+  rule. Internal-vs-external is decided from `APP_URL`'s host at runtime — see §2.5.
 - `app/Services/StaticSiteExporter.php` — renders every route to `public/cache/`.
 - `app/Observers/StaticExportObserver.php` — re-runs the exporter on every Filament save.
-- `public/.htaccess` — the rewrite rule that serves `public/cache/` ahead of Laravel.
+- `public/.htaccess` — the rewrite rule that serves `public/cache/` ahead of Laravel;
+  see §2.8 for a known gap in how it interacts with trailing slashes.
 - `routes/web.php` — legacy WordPress URL shapes, preserved deliberately; see the
   inline comments for why `/weihnachtsgeschichten` and a couple of other paths do
   double duty.
-- `.claude/CLAUDE.md` — fuller project conventions and known outstanding issues
-  (notably: the Impressum/Datenschutz pages have placeholder legal text only).
+- `.claude/CLAUDE.md` — fuller project conventions and outstanding issues.
