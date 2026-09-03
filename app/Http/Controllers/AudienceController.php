@@ -11,7 +11,7 @@ class AudienceController extends Controller
 {
     public function show(ProductAudience $audience): View
     {
-        $audience->loadMissing('products');
+        $audience->load(['products' => fn ($query) => $query->where('available', true)]);
 
         return view('pages.audience', ['audience' => $audience]);
     }

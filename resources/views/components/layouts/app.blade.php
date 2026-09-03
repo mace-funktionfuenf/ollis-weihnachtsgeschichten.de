@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ? $title.' – Ollis Weihnachtsgeschichten' : 'Ollis Weihnachtsgeschichten' }}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     @if ($description)
         <meta name="description" content="{{ $description }}">
     @endif
@@ -298,6 +299,7 @@
             justify-content: space-between; align-items: center; gap: 1rem; font-size: 0.9rem;
         }
         footer.site a { color: #f0ece0; text-decoration: none; }
+        footer.site .affiliate-disclosure { margin: 0.25rem 0 0; font-size: 0.8rem; color: rgba(240, 236, 224, 0.7); }
         footer.site a:hover, footer.site a:focus-visible { color: var(--gold-light); }
         footer.site .meta-list a {
             background: transparent; border-color: rgba(255, 255, 255, 0.25); color: #f0ece0;
@@ -390,7 +392,10 @@
 
     <footer class="site">
         <div class="bar">
-            <p>&copy; {{ date('Y') }} Ollis Weihnachtsgeschichten – Olaf Taubert</p>
+            <div>
+                <p>&copy; {{ date('Y') }} Ollis Weihnachtsgeschichten – Olaf Taubert</p>
+                <p class="affiliate-disclosure">Als Amazon-Partner verdient die Seite an qualifizierten Käufen. Vielen Dank!</p>
+            </div>
             <ul class="meta-list">
                 <li><a href="/impressum/">Impressum</a></li>
                 <li><a href="/datenschutz/">Datenschutz</a></li>

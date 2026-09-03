@@ -11,14 +11,14 @@ class GiftCategoryController extends Controller
 {
     public function index(): View
     {
-        $giftCategories = GiftCategory::withCount('products')->get();
+        $giftCategories = GiftCategory::withCount(['products' => fn ($query) => $query->where('available', true)])->get();
 
         return view('pages.gift-category-index', ['giftCategories' => $giftCategories]);
     }
 
     public function show(GiftCategory $giftCategory): View
     {
-        $giftCategory->loadMissing('products');
+        $giftCategory->load(['products' => fn ($query) => $query->where('available', true)]);
 
         return view('pages.gift-category', ['giftCategory' => $giftCategory]);
     }

@@ -22,7 +22,7 @@
         @if ($product->affiliate_link)
             <p>
                 <a class="btn" href="{{ $product->affiliate_link }}" rel="nofollow sponsored noopener" target="_blank">
-                    Bei Amazon ansehen<span class="visually-hidden"> (öffnet in neuem Tab)</span>
+                    Werbung: Details bei Amazon<span class="visually-hidden"> (öffnet in neuem Tab)</span>
                 </a>
             </p>
         @endif
@@ -45,10 +45,11 @@
             </ul>
         @endif
 
-        @if ($product->related->isNotEmpty())
+        @php $relatedAvailable = $product->related->where('available', true); @endphp
+        @if ($relatedAvailable->isNotEmpty())
             <h2>Das könnte Ihnen auch gefallen</h2>
             <ul class="card-grid">
-                @foreach ($product->related as $related)
+                @foreach ($relatedAvailable as $related)
                     <x-product-card :product="$related" />
                 @endforeach
             </ul>

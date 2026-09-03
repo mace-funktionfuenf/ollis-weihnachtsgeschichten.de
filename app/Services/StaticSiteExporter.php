@@ -61,8 +61,17 @@ class StaticSiteExporter
             $paths[] = $this->write($shop->url(), app(ShopController::class)->show($shop)->render());
         });
 
-        Category::all()->each(function (Category $category) use (&$paths) {
+        // Root categories sit at the flat "/{slug}/" depth (see routes/web.php);
+        // a category with a parent lives under "/{parent-slug}/{slug}/" instead
+        // - exporting every category flatly regardless of parent_id used to
+        // create an unroutable duplicate at the flat path for each of those
+        // children, since the live flat route explicitly excludes them.
+        Category::whereNull('parent_id')->get()->each(function (Category $category) use (&$paths) {
             $paths[] = $this->write('/'.$category->slug.'/', app(CategoryController::class)->show($category)->render());
+        });
+
+        Category::whereNotNull('parent_id')->with('parent')->get()->each(function (Category $category) use (&$paths) {
+            $paths[] = $this->write('/'.$category->parent->slug.'/'.$category->slug.'/', app(CategoryController::class)->show($category)->render());
         });
 
         ProductAudience::all()->each(function (ProductAudience $audience) use (&$paths) {

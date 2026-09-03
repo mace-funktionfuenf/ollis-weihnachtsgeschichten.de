@@ -11,7 +11,7 @@ class MediaTypeController extends Controller
 {
     public function show(MediaType $mediaType): View
     {
-        $mediaType->loadMissing('products');
+        $mediaType->load(['products' => fn ($query) => $query->where('available', true)]);
 
         return view('pages.media-type', ['mediaType' => $mediaType]);
     }

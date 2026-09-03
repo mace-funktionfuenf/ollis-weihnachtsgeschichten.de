@@ -5,7 +5,7 @@
             <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->title }}" loading="lazy" width="160">
         </div>
     @endif
-    <h3><a href="{{ $product->url() }}">{{ $product->title }}</a></h3>
+    <h3>{{ $product->title }}</h3>
     @if ($product->price)
         <p class="price">
             @if ($product->price_old && $product->price_old > $product->price)
@@ -14,15 +14,11 @@
             {{ number_format((float) $product->price, 2, ',', '.') }} €
         </p>
     @endif
-    @if (! $product->available)
-        <p><span class="unavailable">Derzeit nicht verfügbar</span></p>
-    @endif
-    <div class="actions">
-        <a class="btn secondary" href="{{ $product->url() }}">Details</a>
-        @if ($product->affiliate_link)
+    @if ($product->affiliate_link)
+        <div class="actions">
             <a class="btn" href="{{ $product->affiliate_link }}" rel="nofollow sponsored noopener" target="_blank">
-                Ansehen<span class="visually-hidden"> (öffnet bei Amazon in neuem Tab)</span>
+                Werbung: Details bei Amazon<span class="visually-hidden"> (öffnet in neuem Tab)</span>
             </a>
-        @endif
-    </div>
+        </div>
+    @endif
 </li>
