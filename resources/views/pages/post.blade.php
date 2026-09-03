@@ -5,7 +5,7 @@
             <h1>{{ $post->title }}</h1>
             @if ($post->author_name)
                 <div class="article-meta">
-                    <span>von {{ $post->author_name }}</span>
+                    <span>von <a href="/ueber-den-autor/">{{ $post->author_name }}</a></span>
                 </div>
             @endif
         </header>

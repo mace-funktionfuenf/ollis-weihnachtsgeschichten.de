@@ -397,6 +397,7 @@
                 <p class="affiliate-disclosure">Als Amazon-Partner verdient die Seite an qualifizierten Käufen. Vielen Dank!</p>
             </div>
             <ul class="meta-list">
+                <li><a href="/ueber-den-autor/">Über den Autor</a></li>
                 <li><a href="/impressum/">Impressum</a></li>
                 <li><a href="/datenschutz/">Datenschutz</a></li>
             </ul>
