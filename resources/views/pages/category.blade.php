@@ -14,12 +14,7 @@
     @else
         <ul class="card-grid">
             @foreach ($category->posts as $post)
-                <li class="card">
-                    <h3><a href="{{ $post->url() }}">{{ $post->title }}</a></h3>
-                    @if ($post->excerpt)
-                        <p>{{ str(strip_tags($post->excerpt))->limit(140) }}</p>
-                    @endif
-                </li>
+                <x-post-card :post="$post" />
             @endforeach
         </ul>
     @endif

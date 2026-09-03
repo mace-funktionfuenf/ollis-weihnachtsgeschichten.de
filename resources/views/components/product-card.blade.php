@@ -1,7 +1,9 @@
 @props(['product'])
 <li class="card">
     @if ($product->image_path)
-        <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->title }}" loading="lazy" width="160">
+        <div class="thumb">
+            <img src="{{ asset('storage/'.$product->image_path) }}" alt="{{ $product->title }}" loading="lazy" width="160">
+        </div>
     @endif
     <h3><a href="{{ $product->url() }}">{{ $product->title }}</a></h3>
     @if ($product->price)
@@ -13,14 +15,14 @@
         </p>
     @endif
     @if (! $product->available)
-        <p class="unavailable">Derzeit nicht verfügbar</p>
+        <p><span class="unavailable">Derzeit nicht verfügbar</span></p>
     @endif
-    <p>
+    <div class="actions">
         <a class="btn secondary" href="{{ $product->url() }}">Details</a>
         @if ($product->affiliate_link)
             <a class="btn" href="{{ $product->affiliate_link }}" rel="nofollow sponsored noopener" target="_blank">
                 Ansehen<span class="visually-hidden"> (öffnet bei Amazon in neuem Tab)</span>
             </a>
         @endif
-    </p>
+    </div>
 </li>

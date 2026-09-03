@@ -13,6 +13,9 @@ class EditPost extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('save')
+                ->label('Speichern')
+                ->submit('save'),
             Actions\DeleteAction::make(),
         ];
     }

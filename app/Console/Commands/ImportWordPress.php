@@ -344,6 +344,28 @@ class ImportWordPress extends Command
         return $this->downloadTo($url, $relativePath, $label);
     }
 
+    /**
+     * Posts reference their featured image indirectly via "_thumbnail_id",
+     * a WP attachment post ID - resolved against the attachment map built
+     * by indexAttachments(), unlike products which had a ready-made URL.
+     */
+    private function downloadPostImage(?string $thumbnailId, string $slug, string $label): ?string
+    {
+        if (! $thumbnailId) {
+            return null;
+        }
+
+        $url = $this->attachments[$thumbnailId]['url'] ?? null;
+
+        if (! $url) {
+            return null;
+        }
+
+        $relativePath = 'posts/'.$slug.'.'.$this->extensionFromUrl($url);
+
+        return $this->downloadTo($url, $relativePath, $label);
+    }
+
     // ------------------------------------------------------------------
     // Shops
     // ------------------------------------------------------------------
@@ -403,6 +425,7 @@ class ImportWordPress extends Command
             $content = (string) $item->children($ns['content'])->encoded;
             $excerptRaw = (string) ($item->children($ns['excerpt'])->encoded ?? '');
             $login = (string) $item->children($ns['dc'])->creator;
+            $featuredImage = $this->downloadPostImage($meta['_thumbnail_id'] ?? null, $slug, $label);
 
             $post = Post::updateOrCreate(
                 ['wp_post_id' => (int) $wp->post_id],
@@ -411,6 +434,7 @@ class ImportWordPress extends Command
                     'title' => html_entity_decode((string) $item->title),
                     'excerpt' => $excerptRaw !== '' ? trim(strip_tags($excerptRaw)) : null,
                     'body_html' => $this->cleanHtml($content, $label, true),
+                    'featured_image' => $featuredImage,
                     'author_name' => $this->authors[$login] ?? $login,
                     'published_at' => $this->toDateTime((string) $wp->post_date),
                     'status' => (string) $wp->status,
@@ -457,7 +481,12 @@ class ImportWordPress extends Command
             // "weihnachtsgeschenke" is an empty WP taxonomy-archive stub on
             // the legacy site (verified against the live sitemap) - the real
             // page there is now GiftCategoryController@index, not this row.
-            if ($slug === 'weihnachtsgeschenke') {
+            // "impressum" carried nothing but eRecht24 placeholder shortcodes
+            // in the export (no static legal text). Real Impressum and
+            // Datenschutz text has since been commissioned and is maintained
+            // directly as two separate Page rows in the CMS - re-running this
+            // import must never overwrite that with the placeholder again.
+            if (in_array($slug, ['weihnachtsgeschenke', 'impressum'], true)) {
                 continue;
             }
 

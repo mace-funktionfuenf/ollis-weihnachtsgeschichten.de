@@ -18,18 +18,25 @@ class PageResource extends Resource
 
     protected static ?string $navigationGroup = 'Inhalte';
 
+    protected static ?string $modelLabel = 'Seite';
+
+    protected static ?string $pluralModelLabel = 'Seiten';
+
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\TextInput::make('title')->required(),
+            Forms\Components\TextInput::make('title')->label('Titel')->required(),
             Forms\Components\TextInput::make('slug')
+                ->label('Slug')
                 ->required()
                 ->unique(ignoreRecord: true)
                 ->helperText('Bestimmt die URL: /slug/'),
             Forms\Components\RichEditor::make('body_html')
+                ->label('Inhalt')
                 ->required()
                 ->columnSpanFull(),
             Forms\Components\TextInput::make('meta_description')
+                ->label('Meta-Beschreibung')
                 ->maxLength(160)
                 ->columnSpanFull(),
         ]);
@@ -39,8 +46,8 @@ class PageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')->searchable(),
-                Tables\Columns\TextColumn::make('slug')->searchable(),
+                Tables\Columns\TextColumn::make('title')->label('Titel')->searchable(),
+                Tables\Columns\TextColumn::make('slug')->label('Slug')->searchable(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

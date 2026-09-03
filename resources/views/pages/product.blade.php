@@ -28,7 +28,7 @@
         @endif
 
         @if ($product->body_html)
-            <div class="content">{!! $product->body_html !!}</div>
+            <div class="content">{!! \App\Support\ContentHtml::externalLinksInNewTab($product->body_html) !!}</div>
         @endif
 
         @if ($product->audiences->isNotEmpty() || $product->giftCategories->isNotEmpty() || $product->mediaTypes->isNotEmpty())

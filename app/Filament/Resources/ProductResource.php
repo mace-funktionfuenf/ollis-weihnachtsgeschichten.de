@@ -18,6 +18,10 @@ class ProductResource extends Resource
 
     protected static ?string $navigationGroup = 'Inhalte';
 
+    protected static ?string $modelLabel = 'Produkt';
+
+    protected static ?string $pluralModelLabel = 'Produkte';
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -25,11 +29,13 @@ class ProductResource extends Resource
                 ->columns(2)
                 ->schema([
                     Forms\Components\TextInput::make('title')
+                        ->label('Titel')
                         ->required()
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (string $context, $state, callable $set) => $context === 'create' ? $set('slug', str($state)->slug()) : null)
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('slug')
+                        ->label('Slug')
                         ->required()
                         ->unique(ignoreRecord: true)
                         ->helperText('Bestimmt die URL: /produkt/slug/'),
@@ -38,7 +44,7 @@ class ProductResource extends Resource
                         ->default(true),
                     Forms\Components\TextInput::make('asin')->label('ASIN'),
                     Forms\Components\TextInput::make('ean')->label('EAN'),
-                    Forms\Components\TextInput::make('price')->numeric()->prefix('€'),
+                    Forms\Components\TextInput::make('price')->label('Preis')->numeric()->prefix('€'),
                     Forms\Components\TextInput::make('price_old')->label('Alter Preis')->numeric()->prefix('€'),
                     Forms\Components\TextInput::make('affiliate_link')
                         ->label('Amazon-Link (mit Partner-Tag)')
@@ -73,6 +79,7 @@ class ProductResource extends Resource
                         ->preload(),
                 ]),
             Forms\Components\TextInput::make('meta_description')
+                ->label('Meta-Beschreibung')
                 ->maxLength(160)
                 ->columnSpanFull(),
         ]);
@@ -83,8 +90,8 @@ class ProductResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image_path')->label(''),
-                Tables\Columns\TextColumn::make('title')->searchable(),
-                Tables\Columns\TextColumn::make('price')->money('EUR')->sortable(),
+                Tables\Columns\TextColumn::make('title')->label('Titel')->searchable(),
+                Tables\Columns\TextColumn::make('price')->label('Preis')->money('EUR')->sortable(),
                 Tables\Columns\IconColumn::make('available')->label('Verfügbar')->boolean(),
             ])
             ->actions([

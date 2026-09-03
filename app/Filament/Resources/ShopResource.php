@@ -21,16 +21,24 @@ class ShopResource extends Resource
 
     protected static ?string $navigationGroup = 'Inhalte';
 
+    protected static ?string $modelLabel = 'Shop';
+
+    protected static ?string $pluralModelLabel = 'Shops';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('slug')
+                    ->label('Slug')
                     ->required(),
                 Forms\Components\TextInput::make('title')
+                    ->label('Titel')
                     ->required(),
-                Forms\Components\TextInput::make('widget_title'),
+                Forms\Components\TextInput::make('widget_title')
+                    ->label('Widget-Titel'),
                 Forms\Components\Textarea::make('widget_content')
+                    ->label('Widget-Inhalt')
                     ->columnSpanFull(),
             ]);
     }
@@ -40,19 +48,25 @@ class ShopResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('wp_post_id')
+                    ->label('WP-Beitrags-ID')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
+                    ->label('Slug')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('title')
+                    ->label('Titel')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('widget_title')
+                    ->label('Widget-Titel')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Erstellt am')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Aktualisiert am')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

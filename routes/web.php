@@ -59,7 +59,7 @@ Route::get('/{slug}', function (string $slug) {
     }
 
     abort(404);
-})->where('slug', '[A-Za-z0-9\-]+');
+})->where('slug', '[A-Za-z0-9_\-]+');
 
 Route::fallback(function () {
     $redirect = Redirect::where('from_path', '/'.request()->path())->first();

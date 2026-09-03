@@ -46,6 +46,11 @@ class Product extends Model
         return $this->belongsToMany(self::class, 'product_related', 'product_id', 'related_product_id');
     }
 
+    public function posts(): BelongsToMany
+    {
+        return $this->belongsToMany(Post::class);
+    }
+
     public function url(): string
     {
         return '/produkt/'.$this->slug.'/';

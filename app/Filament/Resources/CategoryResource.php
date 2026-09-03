@@ -21,15 +21,22 @@ class CategoryResource extends Resource
 
     protected static ?string $navigationGroup = 'Taxonomien';
 
+    protected static ?string $modelLabel = 'Kategorie';
+
+    protected static ?string $pluralModelLabel = 'Kategorien';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Select::make('parent_id')
+                    ->label('Übergeordnete Kategorie')
                     ->relationship('parent', 'name'),
                 Forms\Components\TextInput::make('slug')
+                    ->label('Slug')
                     ->required(),
                 Forms\Components\TextInput::make('name')
+                    ->label('Name')
                     ->required(),
             ]);
     }
@@ -39,17 +46,22 @@ class CategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('parent.name')
+                    ->label('Übergeordnete Kategorie')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
+                    ->label('Slug')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
+                    ->label('Erstellt am')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Aktualisiert am')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
