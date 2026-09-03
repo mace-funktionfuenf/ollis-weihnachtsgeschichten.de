@@ -38,6 +38,16 @@
             background: var(--cream);
             color: var(--ink);
             line-height: 1.65;
+            /* German compounds long words ("Weihnachtsgeschichten",
+               "Adventskalendergeschichten") and the raw URLs in the legal
+               pages have no natural break point - without this, a single
+               one can be wider than a narrow phone screen and force the
+               whole page to scroll horizontally. hyphens gives long words
+               a proper hyphenated break instead of an abrupt mid-word cut;
+               overflow-wrap is the actual fix and works even where a
+               browser can't hyphenate (e.g. a URL). */
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
         a { color: var(--red); }
         a:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
