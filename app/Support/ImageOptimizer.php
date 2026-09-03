@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+
 /**
  * Downloaded post/product images arrive at their original camera or
  * WordPress-media-library resolution (routinely several megapixels, 1-3MB)
@@ -27,6 +30,25 @@ class ImageOptimizer
      * path is unchanged (including when nothing needed doing, or the file
      * isn't a type GD can handle).
      */
+    /**
+     * Stores a Filament FileUpload's temporary file and optimizes it in the
+     * same step, so an image uploaded straight through the admin panel gets
+     * the same size cap as one pulled in by the WordPress importer - the
+     * cap applies regardless of how large the original upload was.
+     */
+    public static function storeAndOptimize(TemporaryUploadedFile $file, string $directory, string $disk = 'public'): ?string
+    {
+        $path = $file->store($directory, $disk);
+
+        if (! $path) {
+            return $path;
+        }
+
+        $newBasename = self::optimize(Storage::disk($disk)->path($path));
+
+        return $newBasename ? dirname($path).'/'.$newBasename : $path;
+    }
+
     public static function optimize(string $absolutePath): ?string
     {
         if (! extension_loaded('gd') || ! is_file($absolutePath)) {

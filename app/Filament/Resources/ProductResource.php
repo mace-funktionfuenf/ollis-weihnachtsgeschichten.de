@@ -54,6 +54,7 @@ class ProductResource extends Resource
                         ->label('Produktbild')
                         ->image()
                         ->directory('products')
+                        ->saveUploadedFileUsing(fn ($file) => \App\Support\ImageOptimizer::storeAndOptimize($file, 'products'))
                         ->columnSpanFull(),
                 ]),
             Forms\Components\RichEditor::make('body_html')

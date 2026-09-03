@@ -93,7 +93,8 @@ class PostResource extends Resource
                     Forms\Components\FileUpload::make('featured_image')
                         ->label('Neues Bild hochladen')
                         ->image()
-                        ->directory('posts'),
+                        ->directory('posts')
+                        ->saveUploadedFileUsing(fn ($file) => \App\Support\ImageOptimizer::storeAndOptimize($file, 'posts')),
                 ]),
             Forms\Components\Section::make('Kategorien & Schlagworte')
                 ->columns(2)
