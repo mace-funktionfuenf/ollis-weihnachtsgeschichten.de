@@ -45,7 +45,7 @@ class SyncAuthorProfile extends Command
 <h2>Verwurzelt in der Region</h2>
 <p>Als Wunstorfer kennt und schätzt Olaf Taubert die beschauliche Atmosphäre seiner Heimat. Der Blick auf das Steinhuder Meer, das winterliche Treiben in Steinhude und die eisigen Spaziergänge an der frischen Luft bieten die perfekte Kulisse, um neue Ideen für herzerwärmende Weihnachtsgeschichten zu sammeln.</p>
 <blockquote>
-    <p>„Im Notariat geht es um Vertrauen und Verlässlichkeit. In meinen Weihnachtsgeschichten geht es um die kleinen Wunder, die wir im Alltagsstress oft übersehen.“</p>
+    <p>„Im Notariat geht es um Vertrauen und Verlässlichkeit. In meinen Weihnachtsgeschichten der Familie Staude geht es um die kleinen Wunder, die wir im Alltagsstress oft übersehen.“</p>
     <p>– Olaf Taubert</p>
 </blockquote>
 
