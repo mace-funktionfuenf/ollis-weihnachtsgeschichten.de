@@ -8,6 +8,10 @@
     @if ($description)
         <meta name="description" content="{{ $description }}">
     @endif
+    {{-- CCM19 cookie consent manager - loads before consent by necessity
+         (it's the mechanism that presents the consent choice itself), per
+         the Datenschutzerklärung's "Einwilligung mit CCM19" section. --}}
+    <script src="https://cloud.ccm19.de/app.js?apiKey=eb7f18c6197e9181ed530ce7629bfb2086e19e2f9cf1b0d2&amp;domain=6a996941725bc70f7d03c072" referrerpolicy="origin"></script>
     <style>
         :root {
             --green: #2f5d3a;
