@@ -890,6 +890,12 @@ class ImportWordPress extends Command
 
             Storage::disk('public')->put($relativePath, $response->body());
 
+            $newBasename = \App\Support\ImageOptimizer::optimize(Storage::disk('public')->path($relativePath));
+
+            if ($newBasename) {
+                $relativePath = dirname($relativePath).'/'.$newBasename;
+            }
+
             return $relativePath;
         } catch (\Throwable $e) {
             $this->warnings[] = "{$label}: image download failed ({$url}): {$e->getMessage()}";
