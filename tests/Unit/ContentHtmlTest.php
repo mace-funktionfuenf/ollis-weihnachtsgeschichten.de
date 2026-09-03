@@ -64,4 +64,33 @@ class ContentHtmlTest extends TestCase
 
         $this->assertStringContainsString('Grüße', $result);
     }
+
+    public function test_heading_that_skips_straight_to_h3_is_shifted_up_to_h2(): void
+    {
+        $html = '<p>Text</p><h3>Viel Spaß und lustige Weihnachten!</h3><p>mehr Text</p>';
+
+        $result = ContentHtml::externalLinksInNewTab($html);
+
+        $this->assertStringContainsString('<h2>Viel Spaß und lustige Weihnachten!</h2>', $result);
+        $this->assertStringNotContainsString('<h3>', $result);
+    }
+
+    public function test_relative_heading_nesting_is_preserved_when_shifting(): void
+    {
+        $html = '<h3>Abschnitt</h3><h4>Unterabschnitt</h4>';
+
+        $result = ContentHtml::externalLinksInNewTab($html);
+
+        $this->assertStringContainsString('<h2>Abschnitt</h2>', $result);
+        $this->assertStringContainsString('<h3>Unterabschnitt</h3>', $result);
+    }
+
+    public function test_content_already_starting_at_h2_is_left_alone(): void
+    {
+        $html = '<h2>Schon richtig</h2><p>Text</p>';
+
+        $result = ContentHtml::externalLinksInNewTab($html);
+
+        $this->assertStringContainsString('<h2>Schon richtig</h2>', $result);
+    }
 }
