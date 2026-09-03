@@ -15,7 +15,8 @@ plan this was built from (ask if you need the history — not repeated here).
 
 ## Stack & commands
 
-- Language / framework: PHP 8.4, Laravel 11, Filament 3 (admin panel at `/admin`), SQLite locally.
+- Language / framework: PHP 8.4, Laravel 13, Filament 3.3 (admin panel at `/admin`), SQLite
+  locally / MySQL in production.
 - Install: `composer install`
 - Local server: `php artisan serve` (does **not** exercise `public/.htaccess` — the
   static-cache rewrite only applies under real Apache)
@@ -24,6 +25,11 @@ plan this was built from (ask if you need the history — not repeated here).
   (idempotent — safe to re-run; upserts by `wp_post_id`, skips already-downloaded images)
 - Regenerate the static export by hand: `php artisan export:static` (also runs
   automatically on every Filament save via `App\Observers\StaticExportObserver`)
+- One-off content-fix commands (see README §2.7 for how to run these without SSH in
+  production): `content:sync-legal`, `content:sync-author-profile`,
+  `content:cleanup-legacy`, `content:fill-meta-descriptions`, `images:optimize`,
+  `admin:create`. **Always follow any of these with `export:static`** — see the Gotchas
+  section below, this bit us for real once already.
 
 ## Structure
 
@@ -32,27 +38,61 @@ plan this was built from (ask if you need the history — not repeated here).
   shortcode: `[produkte]`, `[ASA]`, `[wpsleep]`, `[caption]`, `[mapsmarker]`, `[embed]`,
   `[erecht24]`, `[borlabs-cookie]`).
 - `app/Services/StaticSiteExporter.php` — renders every route via its Controller (plain
-  method call, not an HTTP round-trip) and writes the HTML to `public/cache/`.
+  method call, not an HTTP round-trip) and writes the HTML to `public/cache/`. Categories
+  with a `parent_id` export under `/{parent-slug}/{slug}/`, root categories export flatly
+  at `/{slug}/` — exporting every category flatly regardless of parent used to create an
+  unroutable duplicate for each child category (fixed 2026-09-03).
 - `routes/web.php` — legacy URL shapes are preserved deliberately: posts/pages/flat
   categories share bare `/{slug}/`, products live under `/produkt/`, product-taxonomy
   archives under `/fuer/`, `/weihnachtsgeschenke/`, `/weihnachtsgeschichten/` (the last one
   is *also* a real post category root — both are genuine, see the route comments).
 - `app/Models/` — one model per WordPress post type/taxonomy actually found in the
   export (`Post`, `Page`, `Product`, `Shop`, `Category`, `Tag`, `ProductAudience`,
-  `GiftCategory`, `MediaType`) plus `Redirect` for legacy-URL 301s.
+  `GiftCategory`, `MediaType`) plus `Redirect` for legacy-URL 301s. `Product.available`
+  gates whether a product shows on any public listing (controllers constrain the eager
+  load to `available = true`; Filament itself sees everything, unconstrained).
+- `app/Support/ContentHtml.php` — post-processes any rendered body HTML (post/page/
+  product/shop) at render time: external links get `target="_blank"` + `rel="noopener
+  noreferrer"`, and heading levels are shifted so the shallowest one used becomes `<h2>`
+  (a lot of imported WordPress content jumps straight to `<h3>`+ with no `<h2>`, breaking
+  the page's semantic outline). Covers old imported content and anything written fresh in
+  Filament with one rule.
+- `app/Support/ImageOptimizer.php` — resizes to a 1200px-wide cap, recompresses, and
+  converts non-transparent PNGs to JPEG, using GD (no new dependency). Wired into both
+  `ImportWordPress::downloadTo()` (WXR-imported images) and every Filament `FileUpload`
+  field (`saveUploadedFileUsing()` on Post's `featured_image` and Product's `image_path`)
+  — the cap applies no matter how an image enters the system, not just imported ones.
+  `app/Console/Commands/OptimizeImages.php` (`images:optimize`) is the one-off backfill
+  for images that predate this.
 - `resources/views/components/layouts/app.blade.php` — the only layout; plain
-  hand-written CSS, no framework/CDN (GDPR self-hosting).
+  hand-written CSS, no framework/CDN (GDPR self-hosting) except the CCM19 consent-manager
+  script (see Conventions below).
 
 ## Conventions
 
 - `wp_post_id` columns are **nullable** — only WXR-imported rows have one; content
   created fresh in Filament doesn't need it.
 - Slugs are never re-derived from titles on imported content (`wp:post_name` verbatim).
-- No consent banner, by design: the Twitter embed and Amazon widget `<script>`s from the
-  legacy site were dropped entirely rather than ported, so there's nothing to consent to.
+- **Consent management: CCM19** (`cloud.ccm19.de`, provider papoo software & media GmbH),
+  loaded sitewide in `app.blade.php`'s `<head>`. This reverses the project's original
+  "no consent banner, by design" decision — the Twitter/Facebook/Google Analytics embeds
+  from the legacy site are still genuinely dropped (not ported), but a real CMP is now in
+  place regardless. It is the one script on this site that isn't self-hosted (see the
+  GDPR self-hosting default) — that's an accepted, deliberate exception, not an oversight:
+  a hosted CMP inherently can't be self-hosted the way a font or icon set can. Its own
+  cookie (`langSet`) will show up in third-party-cookie audits; that's expected of any
+  hosted CMP and isn't a compliance defect.
 
 ## Gotchas
 
+- **A Scheduled Task does not regenerate the static cache.** `export:static` only runs
+  automatically (a) on a Filament save, or (b) as a step in the Git deployment-actions
+  script (README §2.1) — a one-off content-fixing command run via Plesk Scheduled Tasks
+  (README §2.7) is neither. Run `export:static` as a Scheduled Task immediately after any
+  command that changes stored content, file paths, or filenames (`content:cleanup-legacy`,
+  `images:optimize`, etc.) — skipping this caused a real incident (images "disappeared"
+  after `images:optimize` renamed some files; the cached HTML still pointed at the old
+  names/paths until `export:static` ran).
 - The live site's WAF resets connections from Guzzle's default User-Agent — any future
   outbound HTTP call to the old domain needs a browser-like `User-Agent` header (see
   `downloadTo()` in `ImportWordPress.php`) or it'll fail with `cURL error 56`.
@@ -65,30 +105,51 @@ plan this was built from (ask if you need the history — not repeated here).
   outside local/testing envs.
 - `public/cache/` is a fully disposable build artifact (gitignored) — never hand-edit
   files in it, edit content in Filament and let the observer/export command regenerate it.
+- Plesk's own "Password-protected Directories" feature manages HTTP Basic Auth at the
+  Apache **vhost-config level**, not via `.htaccess` — don't add `AuthType`/`AuthUserFile`
+  directives to the git-tracked `public/.htaccess` to replicate this; that file gets
+  redeployed on every push and will conflict with (or duplicate) what Plesk already
+  manages independently. Learned the hard way: doing this caused a live 500 error.
 
-## Outstanding (from the migration — see the final handoff summary for full detail)
+## Outstanding
 
 - A handful of imported posts are flagged (see `ImportWordPress`'s warning output) for a
   human read-through: `<br>`-heavy paragraph breaks, a removed `[mapsmarker]` embed, a
   converted `[embed]` (YouTube link).
 - 99% of content is attributed to a shared `olli` account rather than the real named
-  author (Olaf Taubert per Impressum) — not mechanically fixable from the export.
-- **The supplied Datenschutzerklärung text describes Google Analytics, Usercentrics
-  consent management, and Facebook/Twitter social widgets** — none of which this site
-  actually runs (per the "no consent banner, by design" convention above, those scripts
-  were deliberately dropped, not ported). The text was supplied verbatim and published
-  as-is at `/datenschutz/`; worth a legal/compliance pass to trim the sections describing
-  tools that aren't in use, since a privacy policy is supposed to reflect actual
-  processing, not a superset of it.
+  author (Olaf Taubert per Impressum) — not mechanically fixable from the export. The new
+  `/ueber-den-autor/` page (see below) and the "von {author}" link on every post at least
+  point readers at the real person now, even where the byline itself still literally
+  says "olli".
+- **The final production domain isn't confirmed yet** — the site currently runs on the
+  soft-launch subdomain `static.ollis-weihnachtsgeschichten.de`, gated behind HTTP Basic
+  Auth (Plesk-managed, see Gotchas) while a pre-launch review with the client's marketing
+  manager (Heiko Höhn, Funktion5 GmbH) is underway. Canonical `<link>` tags are
+  deliberately not implemented yet — the static export bakes absolute URLs at build time,
+  so adding them before the domain is final would canonicalize every page to the
+  temporary subdomain.
+- `/geschenkideen/` still has large blocks of static, hand-baked product-card HTML left
+  over from the original WordPress `[produkte]` shortcode resolution (hardcoded prices,
+  images, and old-style "Details" links) that don't reflect `Product.available` or the
+  current card markup, plus a dead AWIN "1a-Geschenkeshop" banner ad. Neither is fixed —
+  flagged during the 2026-09 pre-launch pass but out of scope for it (the two live
+  examples the client gave for the "hide unavailable / direct-to-Amazon" fix were both
+  dynamically-rendered pages, not this one).
 
 ## Real content vs. WordPress-sourced content
 
-- `/impressum/` and `/datenschutz/` are **real, commissioned legal text** (Funktion5 GmbH),
-  set directly as `Page` rows — not derived from the WXR export. `ImportWordPress::importPages()`
-  explicitly skips the `impressum` slug (see its comment, same pattern as `weihnachtsgeschenke`)
-  so a future re-import can never clobber this with the old eRecht24 placeholder. There is
-  no `datenschutz` page in the WXR at all; edit both only via Filament or directly in the
-  database going forward, never by touching the importer.
+- `/impressum/`, `/datenschutz/`, and `/ueber-den-autor/` are **real, hand-authored
+  content** (the first two commissioned legal text from Funktion5 GmbH, the third Olaf
+  Taubert's bio), set directly as `Page` rows — not derived from the WXR export.
+  `ImportWordPress::importPages()` explicitly skips the `impressum` slug (see its comment,
+  same pattern as `weihnachtsgeschenke`) so a future re-import can never clobber this with
+  the old eRecht24 placeholder. There is no `datenschutz` or `ueber-den-autor` page in the
+  WXR at all. Each has a matching one-off sync command (`content:sync-legal`,
+  `content:sync-author-profile`) that upserts it by slug — idempotent, safe to re-run
+  whenever the text changes, and the only way this content reaches a fresh environment
+  (production included) since it isn't part of the WXR import. Edit the text in the
+  command file itself, or directly in Filament/the database — never by touching the
+  importer.
 - `posts.featured_image` (added after the initial migration) is populated by resolving each
   post's `_thumbnail_id` WXR postmeta against the attachment map — see `downloadPostImage()`
   in `ImportWordPress.php`, mirroring `downloadProductImage()`'s pattern. Not every post has
