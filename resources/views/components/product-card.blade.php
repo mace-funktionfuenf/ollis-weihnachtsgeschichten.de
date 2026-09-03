@@ -17,7 +17,7 @@
     @if ($product->affiliate_link)
         <div class="actions">
             <a class="btn" href="{{ $product->affiliate_link }}" rel="nofollow sponsored noopener" target="_blank">
-                Werbung: Details bei Amazon<span class="visually-hidden"> (öffnet in neuem Tab)</span>
+                Werbung: Details bei Amazon<span class="visually-hidden"> zu „{{ $product->title }}“ (öffnet in neuem Tab)</span>
             </a>
         </div>
     @endif

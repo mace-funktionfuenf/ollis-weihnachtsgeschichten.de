@@ -8,6 +8,6 @@
     <h3><a href="{{ $post->url() }}">{{ $post->title }}</a></h3>
     <p>{{ $post->summary() }}</p>
     <div class="actions">
-        <a class="btn secondary" href="{{ $post->url() }}">Weiterlesen</a>
+        <a class="btn secondary" href="{{ $post->url() }}">Weiterlesen<span class="visually-hidden"> zu „{{ $post->title }}“</span></a>
     </div>
 </li>
