@@ -325,7 +325,7 @@
                 </svg>
                 Ollis Weihnachtsgeschichten
             </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
+            <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-label="Menü öffnen">
             <label for="nav-toggle" class="nav-toggle-btn">
                 <span class="visually-hidden">Menü öffnen</span>
                 <span class="bars" aria-hidden="true"></span>
