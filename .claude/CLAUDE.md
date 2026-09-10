@@ -28,8 +28,8 @@ plan this was built from (ask if you need the history — not repeated here).
 - One-off content-fix commands (see README §2.7 for how to run these without SSH in
   production): `content:sync-legal`, `content:sync-author-profile`,
   `content:cleanup-legacy`, `content:fill-meta-descriptions`, `images:optimize`,
-  `admin:create`. **Always follow any of these with `export:static`** — see the Gotchas
-  section below, this bit us for real once already.
+  `admin:create`, `content:seed-advent-calendar`. **Always follow any of these with
+  `export:static`** — see the Gotchas section below, this bit us for real once already.
 
 ## Structure
 
@@ -50,13 +50,47 @@ plan this was built from (ask if you need the history — not repeated here).
   export (`Post`, `Page`, `Product`, `Shop`, `Category`, `Tag`, `ProductAudience`,
   `GiftCategory`, `MediaType`) plus `Redirect` for legacy-URL 301s. `Product.available`
   gates whether a product shows on any public listing (controllers constrain the eager
-  load to `available = true`; Filament itself sees everything, unconstrained).
+  load to `available = true`; Filament itself sees everything, unconstrained). `AdventDoor`
+  (day 1-24, title, story_html) is the one model that isn't WordPress-sourced at all —
+  see the Advent calendar entry below.
+- **`/adventskalendergeschichten/`** (added 2026-09-10) — an Advent calendar: 24 doors,
+  one new story each, that unlock day-by-day through December. Gating is **entirely
+  client-side JS** (`resources/views/pages/advent-calendar.blade.php` compares the
+  visitor's own `Date()` against each door's day) — there's no other way to do "unlock on
+  a date" on a statically-exported site, since every page is pre-rendered once and served
+  by Apache with no per-request server logic at all. All 24 stories are baked into the
+  static HTML regardless of date (just visually/interactively locked), so this is
+  obscurity, not real access control — fine for a fun content gimmick, not for anything
+  sensitive. Two ways to see what's behind a door without waiting for its date: read the
+  raw text in Filament (`/admin/advent-doors`), or open the real page with `?preview` in
+  the URL, which unlocks every door client-side so it can be seen rendered and clicked
+  exactly as visitors will see it. `AdventDoorResource` (Filament) manages the 24 door rows; placeholder text
+  was seeded via `content:seed-advent-calendar` (idempotent — only fills missing days,
+  real text goes in per-door via Filament before December). **This URL used to belong to
+  a root `Category`** (a 3-post "Adventskalendergeschichte" archive: 2006/2007/2014) -
+  deliberately replaced, not merged, per a 2026-09-10 decision. The category row and its
+  post associations are untouched in the DB (the 3 posts stay reachable at their own
+  slugs), but `StaticSiteExporter` explicitly skips exporting that one category by slug
+  so it can never silently reclaim the URL depending on loop order - see the comment
+  there before changing category-export order.
 - `app/Support/ContentHtml.php` — post-processes any rendered body HTML (post/page/
   product/shop) at render time: external links get `target="_blank"` + `rel="noopener
   noreferrer"`, and heading levels are shifted so the shallowest one used becomes `<h2>`
   (a lot of imported WordPress content jumps straight to `<h3>`+ with no `<h2>`, breaking
   the page's semantic outline). Covers old imported content and anything written fresh in
   Filament with one rule.
+- **No imported post/page has any `<p>` tags at all.** WordPress's classic editor stores
+  one paragraph per raw line and only wraps them in `<p>` at render time (`wpautop()`);
+  this rebuild never replicates that, so every imported body is one long unbroken text
+  node. Usually harmless for a short single-narrative story, but genuinely broke
+  `adventskalendergeschichte-2014` (24 images + day-segments crammed into one wall of
+  text) - fixed 2026-09-10 via the one-off `content:format-advent-2014-story` (restores
+  real `<p>` tags, unwraps each day's image from a dead "view full size" link - no
+  lightbox script exists on this site). If another imported post ever turns out to have
+  the same problem, that command is the template to copy, not a place to add more slugs
+  to. Also added CSS support for `.amazonbutton` (`app.blade.php`, aliased onto the
+  existing `.btn` rule) - a leftover WordPress class on affiliate text-links in ~33 posts
+  that had no styling at all before.
 - `app/Support/ImageOptimizer.php` — resizes to a 1200px-wide cap, recompresses, and
   converts non-transparent PNGs to JPEG, using GD (no new dependency). Wired into both
   `ImportWordPress::downloadTo()` (WXR-imported images) and every Filament `FileUpload`
@@ -66,13 +100,24 @@ plan this was built from (ask if you need the history — not repeated here).
   for images that predate this.
 - `resources/views/components/layouts/app.blade.php` — the only layout; plain
   hand-written CSS, no framework/CDN (GDPR self-hosting) except the CCM19 consent-manager
-  script (see Conventions below).
+  script (see Conventions below). Also builds the canonical `<link>` tag (added
+  2026-09-10) from a `:canonical` prop every page view passes in — built off
+  `config('app.url')`, not `url()`/`request()`, since the static export calls each
+  Controller directly rather than through an HTTP request (see
+  `StaticSiteExporter`), so there's no real request to derive a host from.
+  `Category` gained a `url()` method (mirroring the parent/flat routing split
+  `StaticSiteExporter` already used) so its view could pass one too.
 
 ## Conventions
 
 - `wp_post_id` columns are **nullable** — only WXR-imported rows have one; content
   created fresh in Filament doesn't need it.
 - Slugs are never re-derived from titles on imported content (`wp:post_name` verbatim).
+- **"Olli" is Olaf Taubert's pen name for the stories, not a data-quality issue.** 99% of
+  imported content is attributed to a shared `olli` byline rather than his real name — that's
+  intentional (per Impressum, Olaf Taubert is the real, named author; "Olli" is how he signs
+  the stories themselves). The `/ueber-den-autor/` page and the "von {author}" link on every
+  post exist so readers can find the real person behind the pen name, not to fix a mismatch.
 - **Consent management: CCM19** (`cloud.ccm19.de`, provider papoo software & media GmbH),
   loaded sitewide in `app.blade.php`'s `<head>`. This reverses the project's original
   "no consent banner, by design" decision — the Twitter/Facebook/Google Analytics embeds
@@ -85,6 +130,17 @@ plan this was built from (ask if you need the history — not repeated here).
 
 ## Gotchas
 
+- **Fixed 2026-09-10: running the test suite used to corrupt the real static cache.**
+  Every Feature test runs against an isolated in-memory sqlite DB (`phpunit.xml`), but
+  `StaticExportObserver::saved()`/`deleted()` fired on every test fixture save regardless
+  and wrote straight to the real `public/cache/` on disk — so a local `vendor/bin/phpunit`
+  run would silently overwrite real content with whatever thin test fixtures existed in
+  that test's DB (discovered when the Advent calendar page's export came out looking
+  empty right after a test run). `StaticExportObserver` now skips exporting when
+  `app()->runningUnitTests()` is true. Not a production risk (README's deploy script
+  never runs the test suite), but locally: if a `public/cache/` page ever looks wrong
+  right after running tests, that's `export:static` needing a re-run, not a real bug in
+  the page.
 - **A Scheduled Task does not regenerate the static cache.** `export:static` only runs
   automatically (a) on a Filament save, or (b) as a step in the Git deployment-actions
   script (README §2.1) — a one-off content-fixing command run via Plesk Scheduled Tasks
@@ -96,6 +152,11 @@ plan this was built from (ask if you need the history — not repeated here).
 - The live site's WAF resets connections from Guzzle's default User-Agent — any future
   outbound HTTP call to the old domain needs a browser-like `User-Agent` header (see
   `downloadTo()` in `ImportWordPress.php`) or it'll fail with `cURL error 56`.
+- **Don't re-run `import:wordpress` just to inspect the export.** It's a full
+  `updateOrCreate` on every post/page from the raw WXR content — it'll blow away any
+  hand-fixed `body_html`/`meta_description` (the geschenkideen rewrite, the
+  meta-description backfill, one-off content edits, etc.). To check something in the WXR
+  file, parse it directly (`simplexml_load_file`) instead.
 - Blade anonymous components must live under `resources/views/components/`, not
   `resources/views/partials/` — `<x-product-card>` resolves to
   `components/product-card.blade.php`.
@@ -113,35 +174,10 @@ plan this was built from (ask if you need the history — not repeated here).
 
 ## Outstanding
 
-- A handful of imported posts are flagged (see `ImportWordPress`'s warning output) for a
-  human read-through: `<br>`-heavy paragraph breaks, a removed `[mapsmarker]` embed, a
-  converted `[embed]` (YouTube link).
-- 99% of content is attributed to a shared `olli` account rather than the real named
-  author (Olaf Taubert per Impressum) — not mechanically fixable from the export. The new
-  `/ueber-den-autor/` page (see below) and the "von {author}" link on every post at least
-  point readers at the real person now, even where the byline itself still literally
-  says "olli".
-- **Canonical `<link>` tags are not implemented yet.** Confirmed 2026-09-10: the final
-  production domain is `ollis-weihnachtsgeschichten.de` (the site currently runs on the
-  soft-launch subdomain `static.ollis-weihnachtsgeschichten.de`, gated behind Plesk-managed
-  HTTP Basic Auth — see Gotchas). Canonicals were deliberately withheld until the domain
-  was settled, since the static export bakes absolute URLs at build time — that's no
-  longer a blocker.
-- `/geschenkideen/`'s intro paragraph is now a short, current-trends paragraph with one
-  Amazon link (2026-09-10, via `content:cleanup-legacy`), satisfying the client's "kurzer
-  KI Text" ask. Still open: the client's "optimal: jede Woche aktualisieren lassen" —
-  genuine weekly auto-refresh needs an LLM API call on a schedule, which is a new
-  dependency + architecture decision, not a one-off content fix. Ask before building it.
-- `Post::summary()` gained optional `$end`/`$preserveWords` params and `FillMetaDescriptions`
-  was fixed (2026-09-10) — it used to truncate mid-word with no ellipsis before appending
-  the CTA sentence, producing broken run-ons. Affected 44 rows total (12 posts, 30 products,
-  `impressum`, `datenschutz`) — the client's own test URL,
-  `weihnachtsgeschichte-2022-die-perfekten-weihnachten`, was one of them. Fixed and
-  regenerated for the 12 posts + 30 products. `impressum`/`datenschutz` were deliberately
-  left untouched — the client said not to touch anything on the eRecht24 side, and those
-  two rows predate the command's slug exclusion for them (which only stops *future* runs
-  from touching them, not existing data). Still has the broken CTA — flag to the client or
-  fix separately if they want it.
+- `/geschenkideen/`'s intro paragraph got its one-off "short trends text" refresh (see git
+  history). Still open: the client's "optimal: jede Woche aktualisieren lassen" — genuine
+  weekly auto-refresh needs an LLM API call on a schedule, a new dependency + architecture
+  decision. Ask before building it.
 
 ## Real content vs. WordPress-sourced content
 
