@@ -1,4 +1,4 @@
-<x-layouts.app :title="$product->title" :description="$product->meta_description">
+<x-layouts.app :title="$product->title" :description="$product->meta_description" :canonical="$product->url()">
     <article>
         <h1>{{ $product->title }}</h1>
 

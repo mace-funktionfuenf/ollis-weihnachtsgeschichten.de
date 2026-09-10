@@ -1,4 +1,4 @@
-<x-layouts.app :title="$mediaType->name">
+<x-layouts.app :title="$mediaType->name" :canonical="$mediaType->url()">
     <h1>Weihnachtsgeschichten: {{ $mediaType->name }}</h1>
 
     @if ($mediaType->products->isEmpty())

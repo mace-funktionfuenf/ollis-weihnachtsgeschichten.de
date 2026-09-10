@@ -1,4 +1,4 @@
-<x-layouts.app description="Seit über 20 Jahren schreibt Olaf Taubert jedes Jahr eine neue, lustige Weihnachtsgeschichte. Dazu Geschenkideen, Rezepte und mehr rund um Weihnachten.">
+<x-layouts.app description="Seit über 20 Jahren schreibt Olaf Taubert jedes Jahr eine neue, lustige Weihnachtsgeschichte. Dazu Geschenkideen, Rezepte und mehr rund um Weihnachten." canonical="/">
     <div class="hero">
         <h1>Ollis Weihnachtsgeschichten</h1>
 

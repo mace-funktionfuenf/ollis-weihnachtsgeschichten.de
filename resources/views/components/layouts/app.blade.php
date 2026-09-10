@@ -1,4 +1,4 @@
-@props(['title' => null, 'description' => null])
+@props(['title' => null, 'description' => null, 'canonical' => null])
 <!doctype html>
 <html lang="de">
 <head>
@@ -8,6 +8,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     @if ($description)
         <meta name="description" content="{{ $description }}">
+    @endif
+    @if ($canonical)
+        {{-- Built from config('app.url'), not the url()/request() helpers - the
+             static export renders every page via a plain controller method call,
+             not an HTTP round-trip, so there's no real request to derive a host
+             from (see StaticSiteExporter). config('app.url') is also how
+             ContentHtml resolves "internal" links, so this stays consistent
+             with the one absolute-URL source of truth the app already has. --}}
+        <link rel="canonical" href="{{ rtrim((string) config('app.url'), '/').$canonical }}">
     @endif
     {{-- CCM19 cookie consent manager - loads before consent by necessity
          (it's the mechanism that presents the consent choice itself), per
@@ -177,7 +186,7 @@
         main {
             max-width: 44rem; margin: 0 auto; padding: 2.5rem 1.25rem 3.5rem;
         }
-        main:has(.card-grid) { max-width: 66rem; }
+        main:has(.card-grid), main:has(.advent-grid) { max-width: 66rem; }
         main img { max-width: 100%; height: auto; }
         h1, h2, h3 {
             color: var(--green-dark); font-family: Georgia, 'Times New Roman', serif; line-height: 1.25;
@@ -227,13 +236,15 @@
         .price { font-weight: bold; color: var(--green-dark); }
         .price del { color: #8a8175; font-weight: normal; margin-right: 0.4rem; }
 
-        .btn {
+        .btn, .content .amazonbutton {
             display: inline-block; margin-top: 0.5rem; padding: 0.55rem 1.1rem;
             background: var(--red); color: #fff; text-decoration: none; border-radius: 999px; font-size: 0.95rem;
             box-shadow: 0 2px 6px rgba(163, 49, 42, 0.3);
             transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
         }
-        .btn:hover, .btn:focus-visible { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(163, 49, 42, 0.35); }
+        .btn:hover, .btn:focus-visible, .content .amazonbutton:hover, .content .amazonbutton:focus-visible {
+            background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(163, 49, 42, 0.35);
+        }
         .btn.secondary {
             background: transparent; color: var(--red); border: 1px solid var(--red); box-shadow: none;
         }

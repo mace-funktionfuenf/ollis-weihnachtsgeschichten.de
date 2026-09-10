@@ -1,4 +1,4 @@
-<x-layouts.app :title="'Für '.$audience->name">
+<x-layouts.app :title="'Für '.$audience->name" :canonical="$audience->url()">
     <h1>Geschenkideen für {{ $audience->name }}</h1>
 
     @if ($audience->products->isEmpty())

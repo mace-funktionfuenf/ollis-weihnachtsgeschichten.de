@@ -1,4 +1,4 @@
-<x-layouts.app :title="$category->name">
+<x-layouts.app :title="$category->name" :canonical="$category->url()">
     <h1>{{ $category->name }}</h1>
 
     @if ($category->children->isNotEmpty())

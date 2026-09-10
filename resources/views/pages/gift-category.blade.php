@@ -1,4 +1,4 @@
-<x-layouts.app :title="$giftCategory->name">
+<x-layouts.app :title="$giftCategory->name" :canonical="$giftCategory->url()">
     <h1>Weihnachtsgeschenke: {{ $giftCategory->name }}</h1>
 
     @if ($giftCategory->products->isEmpty())

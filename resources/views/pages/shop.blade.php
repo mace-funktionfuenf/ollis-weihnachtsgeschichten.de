@@ -1,4 +1,4 @@
-<x-layouts.app :title="$shop->title">
+<x-layouts.app :title="$shop->title" :canonical="$shop->url()">
     <article>
         <h1>{{ $shop->title }}</h1>
         @if ($shop->widget_content)

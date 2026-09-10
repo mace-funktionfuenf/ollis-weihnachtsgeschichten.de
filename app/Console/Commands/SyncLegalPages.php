@@ -51,6 +51,7 @@ DE241256264</p>
 <h2>Verbraucher­streit­beilegung/Universal­schlichtungs­stelle</h2>
 <p>Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
 HTML,
+                'meta_description' => 'Impressum von Ollis Weihnachtsgeschichten: Anbieterkennzeichnung und Kontaktdaten gemäß § 5 TMG.',
             ]
         );
 
@@ -104,6 +105,7 @@ E-Mail: <a href="mailto:info@funktion5.de">info@funktion5.de</a></p>
 <h4>Amazon Partner­programm</h4> <p>Anbieter ist die Amazon Europe Core S.à.r.l. Details entnehmen Sie der Datenschutzerklärung von Amazon unter: <a href="https://www.amazon.de/gp/help/customer/display.html?nodeId=201909010" target="_blank" rel="noopener noreferrer">https://www.amazon.de/gp/help/customer/display.html?nodeId=201909010</a>.</p>
 <p>Das Unternehmen verfügt über eine Zertifizierung nach dem „EU-US Data Privacy Framework“ (DPF). Der DPF ist ein Übereinkommen zwischen der Europäischen Union und den USA, der die Einhaltung europäischer Datenschutzstandards bei Datenverarbeitungen in den USA gewährleisten soll. Jedes nach dem DPF zertifizierte Unternehmen verpflichtet sich, diese Datenschutzstandards einzuhalten. Weitere Informationen hierzu erhalten Sie vom Anbieter unter folgendem Link: <a href="https://www.dataprivacyframework.gov/s/participant-search/participant-detail?contact=true&id=a2zt0000000TOWQAA4&status=Active" target="_blank" rel="noopener noreferrer">https://www.dataprivacyframework.gov/s/participant-search/participant-detail?contact=true&id=a2zt0000000TOWQAA4&status=Active</a></p>
 HTML,
+                'meta_description' => 'Datenschutzerklärung von Ollis Weihnachtsgeschichten: Informationen zur Verarbeitung personenbezogener Daten gemäß DSGVO.',
             ]
         );
 

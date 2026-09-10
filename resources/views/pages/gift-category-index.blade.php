@@ -1,4 +1,4 @@
-<x-layouts.app title="Weihnachtsgeschenke" description="Geschenkideen zu Weihnachten, sortiert nach Zielgruppe.">
+<x-layouts.app title="Weihnachtsgeschenke" description="Geschenkideen zu Weihnachten, sortiert nach Zielgruppe." canonical="/weihnachtsgeschenke/">
     <h1>Weihnachtsgeschenke</h1>
     <p class="lede">Geschenkideen zu Weihnachten – sortiert nach Zielgruppe.</p>
 

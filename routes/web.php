@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AdventCalendarController;
 use App\Http\Controllers\AudienceController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\GiftCategoryController;
@@ -29,6 +30,8 @@ Route::get('/fuer/{audience:slug}', [AudienceController::class, 'show']);
 
 Route::get('/weihnachtsgeschenke', [GiftCategoryController::class, 'index']);
 Route::get('/weihnachtsgeschenke/{giftCategory:slug}', [GiftCategoryController::class, 'show']);
+
+Route::get('/adventskalendergeschichten', [AdventCalendarController::class, 'index']);
 
 // "weihnachtsgeschichten" is both a post category (root archive) and a
 // product taxonomy (nested media-type archives beneath the same base path)

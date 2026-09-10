@@ -1,5 +1,5 @@
 @php $categories = $post->categories; $tags = $post->tags; $availableProducts = $post->products->where('available', true); @endphp
-<x-layouts.app :title="$post->title" :description="$post->meta_description">
+<x-layouts.app :title="$post->title" :description="$post->meta_description" :canonical="$post->url()">
     <article>
         <header class="article-header">
             <h1>{{ $post->title }}</h1>

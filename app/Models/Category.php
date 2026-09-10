@@ -27,4 +27,18 @@ class Category extends Model
     {
         return $this->belongsToMany(Post::class);
     }
+
+    /**
+     * Mirrors the routing/export split: a root category sits at the flat
+     * "/{slug}/" depth, one with a parent nests under it - see routes/web.php
+     * and StaticSiteExporter for the same rule applied to exported paths.
+     */
+    public function url(): string
+    {
+        if ($this->parent) {
+            return '/'.$this->parent->slug.'/'.$this->slug.'/';
+        }
+
+        return '/'.$this->slug.'/';
+    }
 }

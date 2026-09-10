@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Controllers\AdventCalendarController;
 use App\Http\Controllers\AudienceController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\GiftCategoryController;
@@ -67,6 +68,18 @@ class StaticSiteExporter
         // create an unroutable duplicate at the flat path for each of those
         // children, since the live flat route explicitly excludes them.
         Category::whereNull('parent_id')->get()->each(function (Category $category) use (&$paths) {
+            // "adventskalendergeschichten" is a deliberate exception: its old
+            // 3-post category archive was superseded by the interactive
+            // Advent calendar (AdventCalendarController, below) at the same
+            // URL, per the 2026-09-10 decision to replace rather than merge.
+            // The category row and its post associations are untouched in
+            // the DB (the 3 posts stay reachable at their own slugs) - it's
+            // only skipped here so this loop can't silently reclaim the URL
+            // by writing after the calendar depending on iteration order.
+            if ($category->slug === 'adventskalendergeschichten') {
+                return;
+            }
+
             $paths[] = $this->write('/'.$category->slug.'/', app(CategoryController::class)->show($category)->render());
         });
 
@@ -86,6 +99,8 @@ class StaticSiteExporter
             $paths[] = $this->write($giftCategory->url(), app(GiftCategoryController::class)->show($giftCategory)->render());
         });
         $paths[] = $this->write('/weihnachtsgeschenke/', app(GiftCategoryController::class)->index()->render());
+
+        $paths[] = $this->write('/adventskalendergeschichten/', app(AdventCalendarController::class)->index()->render());
 
         return $paths;
     }

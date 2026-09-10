@@ -37,6 +37,8 @@ class CleanupLegacyContent extends Command
         $this->refreshGeschenkideenIntro();
         $this->rewriteGeschenkideenTrendsIntro();
         $this->cleanupGeschenkideenProductCards();
+        $this->removeDeadYoutubeLink();
+        $this->removeMapsmarkerPlaceholder();
 
         return self::SUCCESS;
     }
@@ -252,5 +254,55 @@ class CleanupLegacyContent extends Command
         $page->body_html = $result;
         $page->save();
         $this->info('Cleaned up Geschenkideen product cards: dropped unavailable products, internal Details links, and the AWIN banner.');
+    }
+
+    /**
+     * The [embed] shortcode was converted to a plain outbound link at import
+     * time (see ImportWordPress::resolveShortcodes()) rather than left as a
+     * live iframe. The video it points to is gone (confirmed 2026-09-10), so
+     * the link itself is now dead weight - drop the whole paragraph.
+     */
+    private function removeDeadYoutubeLink(): void
+    {
+        $post = Post::where('slug', 'edeka-werbung-weihnachten')->first();
+
+        if (! $post || ! str_contains($post->body_html, 'youtube.com/watch?v=H965m0Hkk5M')) {
+            $this->info('Dead YouTube link already removed, skipping.');
+
+            return;
+        }
+
+        $post->body_html = preg_replace(
+            '#<p><a href="https://www\.youtube\.com/watch\?v=H965m0Hkk5M"[^>]*>Video ansehen</a></p>\s*#',
+            '',
+            $post->body_html
+        );
+        $post->save();
+        $this->info('Removed the dead YouTube link.');
+    }
+
+    /**
+     * The [mapsmarker] plugin's pin data isn't in the WXR export at all
+     * (see ImportWordPress::resolveShortcodes()), so it was replaced with a
+     * placeholder note at import time. Confirmed 2026-09-10: no map is
+     * planned, so the placeholder itself can go too.
+     */
+    private function removeMapsmarkerPlaceholder(): void
+    {
+        $post = Post::where('slug', 'weihnachtsgeschichten-mit-lokalem-bezug')->first();
+
+        if (! $post || ! str_contains($post->body_html, 'interaktive Karte wurde hier entfernt')) {
+            $this->info('Mapsmarker placeholder already removed, skipping.');
+
+            return;
+        }
+
+        $post->body_html = preg_replace(
+            '#<p><em>\[Hinweis: Eine interaktive Karte wurde hier entfernt\.\]</em></p>\s*#',
+            '',
+            $post->body_html
+        );
+        $post->save();
+        $this->info('Removed the mapsmarker placeholder note.');
     }
 }
