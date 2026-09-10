@@ -121,20 +121,27 @@ plan this was built from (ask if you need the history — not repeated here).
   `/ueber-den-autor/` page (see below) and the "von {author}" link on every post at least
   point readers at the real person now, even where the byline itself still literally
   says "olli".
-- **The final production domain isn't confirmed yet** — the site currently runs on the
-  soft-launch subdomain `static.ollis-weihnachtsgeschichten.de`, gated behind HTTP Basic
-  Auth (Plesk-managed, see Gotchas) while a pre-launch review with the client's marketing
-  manager (Heiko Höhn, Funktion5 GmbH) is underway. Canonical `<link>` tags are
-  deliberately not implemented yet — the static export bakes absolute URLs at build time,
-  so adding them before the domain is final would canonicalize every page to the
-  temporary subdomain.
-- `/geschenkideen/` still has large blocks of static, hand-baked product-card HTML left
-  over from the original WordPress `[produkte]` shortcode resolution (hardcoded prices,
-  images, and old-style "Details" links) that don't reflect `Product.available` or the
-  current card markup, plus a dead AWIN "1a-Geschenkeshop" banner ad. Neither is fixed —
-  flagged during the 2026-09 pre-launch pass but out of scope for it (the two live
-  examples the client gave for the "hide unavailable / direct-to-Amazon" fix were both
-  dynamically-rendered pages, not this one).
+- **Canonical `<link>` tags are not implemented yet.** Confirmed 2026-09-10: the final
+  production domain is `ollis-weihnachtsgeschichten.de` (the site currently runs on the
+  soft-launch subdomain `static.ollis-weihnachtsgeschichten.de`, gated behind Plesk-managed
+  HTTP Basic Auth — see Gotchas). Canonicals were deliberately withheld until the domain
+  was settled, since the static export bakes absolute URLs at build time — that's no
+  longer a blocker.
+- `/geschenkideen/`'s intro paragraph is now a short, current-trends paragraph with one
+  Amazon link (2026-09-10, via `content:cleanup-legacy`), satisfying the client's "kurzer
+  KI Text" ask. Still open: the client's "optimal: jede Woche aktualisieren lassen" —
+  genuine weekly auto-refresh needs an LLM API call on a schedule, which is a new
+  dependency + architecture decision, not a one-off content fix. Ask before building it.
+- `Post::summary()` gained optional `$end`/`$preserveWords` params and `FillMetaDescriptions`
+  was fixed (2026-09-10) — it used to truncate mid-word with no ellipsis before appending
+  the CTA sentence, producing broken run-ons. Affected 44 rows total (12 posts, 30 products,
+  `impressum`, `datenschutz`) — the client's own test URL,
+  `weihnachtsgeschichte-2022-die-perfekten-weihnachten`, was one of them. Fixed and
+  regenerated for the 12 posts + 30 products. `impressum`/`datenschutz` were deliberately
+  left untouched — the client said not to touch anything on the eRecht24 side, and those
+  two rows predate the command's slug exclusion for them (which only stops *future* runs
+  from touching them, not existing data). Still has the broken CTA — flag to the client or
+  fix separately if they want it.
 
 ## Real content vs. WordPress-sourced content
 
