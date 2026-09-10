@@ -213,7 +213,7 @@ every future pull untouched.
 APP_NAME="Ollis Weihnachtsgeschichten"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://static.ollis-weihnachtsgeschichten.de
+APP_URL=https://ollis-weihnachtsgeschichten.de
 APP_KEY=                    # generate locally: php artisan key:generate --show
 APP_LOCALE=de
 APP_FALLBACK_LOCALE=de
