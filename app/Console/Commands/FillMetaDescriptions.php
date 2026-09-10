@@ -29,7 +29,7 @@ class FillMetaDescriptions extends Command
     {
         $postCount = 0;
         Post::whereNull('meta_description')->orWhere('meta_description', '')->get()->each(function (Post $post) use (&$postCount) {
-            $post->meta_description = Str::limit($post->summary(120), 120, '')
+            $post->meta_description = $post->summary(120, ' …', preserveWords: true)
                 .' Jetzt bei Ollis Weihnachtsgeschichten weiterlesen.';
             $post->saveQuietly();
             $postCount++;
@@ -38,7 +38,7 @@ class FillMetaDescriptions extends Command
         $productCount = 0;
         Product::whereNull('meta_description')->orWhere('meta_description', '')->get()->each(function (Product $product) use (&$productCount) {
             $base = $product->body_html
-                ? Str::limit(str(strip_tags($product->body_html))->squish()->toString(), 100, '')
+                ? Str::limit(str(strip_tags($product->body_html))->squish()->toString(), 100, ' …', preserveWords: true)
                 : $product->title;
             $product->meta_description = $base.' Jetzt bei Amazon ansehen und bestellen.';
             $product->saveQuietly();
@@ -51,7 +51,7 @@ class FillMetaDescriptions extends Command
             ->whereNotIn('slug', ['impressum', 'datenschutz'])
             ->get()
             ->each(function (Page $page) use (&$pageCount) {
-                $page->meta_description = Str::limit(str(strip_tags($page->body_html))->squish()->toString(), 130, '')
+                $page->meta_description = Str::limit(str(strip_tags($page->body_html))->squish()->toString(), 130, ' …', preserveWords: true)
                     .' Jetzt entdecken.';
                 $page->saveQuietly();
                 $pageCount++;

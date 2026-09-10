@@ -46,10 +46,10 @@ class Post extends Model
      * populated it) - fall back to the body text rather than showing
      * listing cards with a bare title and nothing else.
      */
-    public function summary(int $limit = 160): string
+    public function summary(int $limit = 160, string $end = '...', bool $preserveWords = false): string
     {
         $source = $this->excerpt ?: $this->body_html;
 
-        return str(strip_tags($source))->squish()->limit($limit)->toString();
+        return str(strip_tags($source))->squish()->limit($limit, $end, $preserveWords)->toString();
     }
 }
