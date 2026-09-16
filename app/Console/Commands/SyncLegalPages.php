@@ -27,6 +27,12 @@ class SyncLegalPages extends Command
             [
                 'title' => 'Impressum',
                 'body_html' => <<<'HTML'
+<p>Autor von Ollis Weihnachtsgeschichten<br>
+Olaf Taubert<br>
+Kamerun 2<br>
+31515 Steinhude am Meer<br>
+E-Mail: <a href="mailto:info@kanzlei-wunstorf.de">info@kanzlei-wunstorf.de</a></p>
+
 <p>Funktion5 GmbH<br>
 Mittelstraße 5<br>
 31515 Wunstorf</p>
@@ -44,9 +50,6 @@ E-Mail: <a href="mailto:info@funktion5.de">info@funktion5.de</a></p>
 <h2>Umsatzsteuer-ID</h2>
 <p>Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:<br>
 DE241256264</p>
-
-<h2>EU-Streitschlichtung</h2>
-<p>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>.<br> Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
 
 <h2>Verbraucher­streit­beilegung/Universal­schlichtungs­stelle</h2>
 <p>Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>

@@ -45,10 +45,27 @@ Route::get('/weihnachtsgeschichten/{mediaType:slug}', [MediaTypeController::clas
 // The only hierarchical post category on the legacy site.
 Route::get('/die-schoensten-weihnachtsgeschichten/{category:slug}', [CategoryController::class, 'show']);
 
+// A Redirect check that both the single-segment catch-all below and the
+// multi-segment Route::fallback need: a bare "/{slug}" path matches the
+// catch-all's own URI pattern, so it never reaches Route::fallback at all -
+// without this shared check, any redirect whose from_path has no second
+// segment (e.g. "/old-slug") would 404 instead of redirecting, since the
+// catch-all's own abort(404) fires first. Discovered 2026-09-16: 25 of the
+// 207 imported redirects were exactly this shape and silently broken.
+$redirectOrAbort = function (string $path) {
+    $redirect = Redirect::where('from_path', $path)->first();
+
+    if ($redirect) {
+        return redirect($redirect->to_path, $redirect->status_code);
+    }
+
+    abort(404);
+};
+
 // Pages, flat post categories, and posts all sat at the same bare "/{slug}/"
 // depth on the legacy site - one route tries each in turn, per the
 // migration skill's guidance for multiple post types sharing a flat depth.
-Route::get('/{slug}', function (string $slug) {
+Route::get('/{slug}', function (string $slug) use ($redirectOrAbort) {
     if ($page = Page::where('slug', $slug)->first()) {
         return app(PageController::class)->show($page);
     }
@@ -61,15 +78,9 @@ Route::get('/{slug}', function (string $slug) {
         return app(PostController::class)->show($post);
     }
 
-    abort(404);
+    return $redirectOrAbort('/'.$slug);
 })->where('slug', '[A-Za-z0-9_\-]+');
 
-Route::fallback(function () {
-    $redirect = Redirect::where('from_path', '/'.request()->path())->first();
-
-    if ($redirect) {
-        return redirect($redirect->to_path, $redirect->status_code);
-    }
-
-    abort(404);
+Route::fallback(function () use ($redirectOrAbort) {
+    return $redirectOrAbort('/'.request()->path());
 });

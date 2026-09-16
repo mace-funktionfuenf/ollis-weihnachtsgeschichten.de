@@ -31,16 +31,19 @@ class FormatAdvent2014Story extends Command
 
     public function handle(): int
     {
-        $post = Post::where('slug', 'adventskalendergeschichte-2014')->first();
+        // Also matched by its new slug (see content:rename-advent-stories,
+        // 2026-09-16) - this command must keep working regardless of which
+        // one of the two has already been run against a given environment.
+        $post = Post::whereIn('slug', ['adventskalendergeschichte-2014', 'adventskalendergeschichte-durchstarter'])->first();
 
         if (! $post) {
-            $this->warn('adventskalendergeschichte-2014 not found, skipping.');
+            $this->warn('adventskalendergeschichte-2014/-durchstarter not found, skipping.');
 
             return self::SUCCESS;
         }
 
         if (! str_contains($post->body_html, '<a name=')) {
-            $this->info('adventskalendergeschichte-2014 already formatted, skipping.');
+            $this->info('adventskalendergeschichte-durchstarter already formatted, skipping.');
 
             return self::SUCCESS;
         }
@@ -127,7 +130,7 @@ class FormatAdvent2014Story extends Command
 
         $post->body_html = implode("\n", $paragraphs);
         $post->save();
-        $this->info('Reformatted adventskalendergeschichte-2014 into proper paragraphs.');
+        $this->info('Reformatted the 2014 Advent calendar story into proper paragraphs.');
 
         return self::SUCCESS;
     }

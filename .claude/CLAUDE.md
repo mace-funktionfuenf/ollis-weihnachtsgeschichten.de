@@ -27,9 +27,14 @@ plan this was built from (ask if you need the history — not repeated here).
   automatically on every Filament save via `App\Observers\StaticExportObserver`)
 - One-off content-fix commands (see README §2.7 for how to run these without SSH in
   production): `content:sync-legal`, `content:sync-author-profile`,
-  `content:cleanup-legacy`, `content:fill-meta-descriptions`, `images:optimize`,
-  `admin:create`, `content:seed-advent-calendar`. **Always follow any of these with
-  `export:static`** — see the Gotchas section below, this bit us for real once already.
+  `content:cleanup-legacy`, `content:fill-meta-descriptions`,
+  `content:shorten-meta-descriptions`, `content:format-advent-2014-story`,
+  `content:rename-advent-stories`, `content:remove-instagram-advent-post`,
+  `content:dedupe-product-audience-tags`, `images:optimize`, `admin:create`,
+  `content:seed-advent-calendar`. **Always follow any of these with `export:static`** —
+  see the Gotchas section below, this bit us for real once already. **And always actually
+  run the command itself after editing its PHP source** — editing the file changes
+  nothing on its own (also in Gotchas, bit us for real too).
 
 ## Structure
 
@@ -50,7 +55,15 @@ plan this was built from (ask if you need the history — not repeated here).
   export (`Post`, `Page`, `Product`, `Shop`, `Category`, `Tag`, `ProductAudience`,
   `GiftCategory`, `MediaType`) plus `Redirect` for legacy-URL 301s. `Product.available`
   gates whether a product shows on any public listing (controllers constrain the eager
-  load to `available = true`; Filament itself sees everything, unconstrained). `AdventDoor`
+  load to `available = true`; Filament itself sees everything, unconstrained).
+  `ProductAudience` (`/fuer/{slug}/`) and `GiftCategory` (`/weihnachtsgeschenke/{slug}/`)
+  are two near-duplicate taxonomies - each of the three audience slugs
+  (erwachsene/familie/kinder) has a matching gift category with almost the same product
+  set, which used to show as two duplicate-looking tag links on a product's own page.
+  `content:dedupe-product-audience-tags` (2026-09-16) detached the audience wherever the
+  matching gift category was already on the same product, so `/fuer/{slug}/` archives are
+  now sparse by design, not broken - they only list products that genuinely have *no*
+  matching gift category. `AdventDoor`
   (day 1-24, title, story_html) is the one model that isn't WordPress-sourced at all —
   see the Advent calendar entry below.
 - **`/adventskalendergeschichten/`** (added 2026-09-10) — an Advent calendar: 24 doors,
@@ -130,6 +143,20 @@ plan this was built from (ask if you need the history — not repeated here).
 
 ## Gotchas
 
+- **Fixed 2026-09-16: a single-segment `Redirect` row silently 404'd instead of
+  redirecting.** `Route::get('/{slug}', ...)` matches any single-path-segment URL and
+  calls `abort(404)` itself when nothing matches - which means `Route::fallback()` (where
+  the `Redirect` lookup lived) was *never reached* for a `from_path` like `/old-slug`; it
+  only ever worked for multi-segment paths (`/a/b`), which don't match `/{slug}` at all.
+  25 of the 207 imported redirects were exactly this shape and had been silently broken
+  the whole time. Fixed by sharing one `$redirectOrAbort` closure between the `/{slug}`
+  catch-all and `Route::fallback` (see `routes/web.php`) - if you ever touch that file,
+  keep both call sites wired to it, or single-segment redirects will regress.
+- **Editing a `content:*` command's PHP source does nothing on its own** - it only changes
+  what the command *would* do next time it runs. Forgot this once (2026-09-16): edited
+  `SyncLegalPages.php`'s Impressum text, exported static, and only noticed the live page
+  was unchanged because the command itself was never re-run after the edit. Always
+  `php artisan content:whatever` again after editing one, then `export:static`.
 - **Fixed 2026-09-10: running the test suite used to corrupt the real static cache.**
   Every Feature test runs against an isolated in-memory sqlite DB (`phpunit.xml`), but
   `StaticExportObserver::saved()`/`deleted()` fired on every test fixture save regardless
@@ -174,6 +201,13 @@ plan this was built from (ask if you need the history — not repeated here).
 
 ## Outstanding
 
+- **The staging site (`static.ollis-weihnachtsgeschichten.de`) is behind the database.**
+  Heiko's 2026-09-16 review flagged content as "unchanged" (the Geschenkideen intro, the
+  canonical tags) that had actually already been fixed here 2026-09-10 — because a code
+  deploy doesn't run any `content:*` one-off command against staging's own database (see
+  README §2.7); someone has to trigger each one there separately. Every `content:*`
+  command run locally this session (see Stack & commands) needs the same manual run on
+  staging, in order, followed by `export:static`, before the site actually reflects it.
 - `/geschenkideen/`'s intro paragraph got its one-off "short trends text" refresh (see git
   history). Still open: the client's "optimal: jede Woche aktualisieren lassen" — genuine
   weekly auto-refresh needs an LLM API call on a schedule, a new dependency + architecture

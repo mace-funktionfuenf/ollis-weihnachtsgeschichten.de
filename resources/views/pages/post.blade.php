@@ -19,7 +19,7 @@
         @if ($categories->isNotEmpty() || $tags->isNotEmpty())
             <ul class="meta-list">
                 @foreach ($categories as $category)
-                    <li><a href="{{ '/'.$category->slug.'/' }}">{{ $category->name }}</a></li>
+                    <li><a href="{{ $category->url() }}">{{ $category->name }}</a></li>
                 @endforeach
                 @foreach ($tags as $tag)
                     <li><span>{{ $tag->name }}</span></li>
