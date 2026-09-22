@@ -9,13 +9,21 @@
         </ul>
     @endif
 
-    @if ($category->posts->isEmpty())
-        <p>Für diese Kategorie sind noch keine Geschichten hinterlegt.</p>
-    @else
+    @if ($category->posts->isNotEmpty())
         <ul class="card-grid">
             @foreach ($category->posts as $post)
                 <x-post-card :post="$post" />
             @endforeach
         </ul>
+    @endif
+
+    @if ($products->isNotEmpty())
+        <ul class="card-grid">
+            @foreach ($products as $product)
+                <x-product-card :product="$product" />
+            @endforeach
+        </ul>
+    @elseif ($category->posts->isEmpty())
+        <p>Für diese Kategorie sind noch keine Geschichten hinterlegt.</p>
     @endif
 </x-layouts.app>
