@@ -46,7 +46,12 @@ class StaticSiteExporter
 
         // "startseite" backs the homepage's intro copy (rendered via
         // HomeController above) rather than being routable on its own.
-        Page::where('slug', '!=', 'startseite')->get()->each(function (Page $page) use (&$paths) {
+        // "adventskalender" is skipped for the same reason as the category
+        // below: its content is now rendered via AdventCalendarController
+        // (which loads and includes this Page itself), not the plain page
+        // template - explicit skip so this loop can't silently reclaim the
+        // URL with the wrong template depending on write order.
+        Page::whereNotIn('slug', ['startseite', 'adventskalender'])->get()->each(function (Page $page) use (&$paths) {
             $paths[] = $this->write($page->url(), app(PageController::class)->show($page)->render());
         });
 
@@ -70,12 +75,14 @@ class StaticSiteExporter
         Category::whereNull('parent_id')->get()->each(function (Category $category) use (&$paths) {
             // "adventskalendergeschichten" is a deliberate exception: its old
             // 3-post category archive was superseded by the interactive
-            // Advent calendar (AdventCalendarController, below) at the same
-            // URL, per the 2026-09-10 decision to replace rather than merge.
-            // The category row and its post associations are untouched in
-            // the DB (the 3 posts stay reachable at their own slugs) - it's
-            // only skipped here so this loop can't silently reclaim the URL
-            // by writing after the calendar depending on iteration order.
+            // Advent calendar on 2026-09-10, then that calendar itself moved
+            // to "/adventskalender/" - so this URL is now fully retired
+            // (redirects to "/adventskalender/", see
+            // ConsolidateAdventCalendarUrl) rather than serving anything of
+            // its own. The category row and its post associations are
+            // untouched in the DB (the 3 posts stay reachable at their own
+            // slugs) - it's only skipped here so this loop can't silently
+            // resurrect the old archive at this URL.
             if ($category->slug === 'adventskalendergeschichten') {
                 return;
             }
@@ -100,7 +107,7 @@ class StaticSiteExporter
         });
         $paths[] = $this->write('/weihnachtsgeschenke/', app(GiftCategoryController::class)->index()->render());
 
-        $paths[] = $this->write('/adventskalendergeschichten/', app(AdventCalendarController::class)->index()->render());
+        $paths[] = $this->write('/adventskalender/', app(AdventCalendarController::class)->index()->render());
 
         return $paths;
     }

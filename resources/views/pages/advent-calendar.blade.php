@@ -1,7 +1,7 @@
 <x-layouts.app
     title="Adventskalender"
     description="Unser Adventskalender mit 24 neuen Weihnachtsgeschichten – jeden Tag öffnet sich ein neues Türchen."
-    canonical="/adventskalendergeschichten/"
+    canonical="/adventskalender/"
 >
     <h1>Adventskalender</h1>
     <p class="lede">
@@ -37,6 +37,10 @@
         </style>
         <p>Ihr Browser führt kein JavaScript aus, daher werden hier alle Geschichten direkt angezeigt.</p>
     </noscript>
+
+    @if ($page)
+        <div class="content">{!! \App\Support\ContentHtml::externalLinksInNewTab($page->body_html) !!}</div>
+    @endif
 
     <style>
         .advent-grid {

@@ -370,12 +370,11 @@
                         </ul>
                     </li>
                     <li class="has-dropdown">
-                        <a href="/adventskalendergeschichten/">Adventskalendergeschichten</a>
-                        <button type="button" class="dropdown-toggle" aria-expanded="false" aria-label="Untermenü „Adventskalendergeschichten“ öffnen">
+                        <a href="/adventskalender/">Adventskalender</a>
+                        <button type="button" class="dropdown-toggle" aria-expanded="false" aria-label="Untermenü „Adventskalender“ öffnen">
                             <span class="caret" aria-hidden="true"></span>
                         </button>
                         <ul class="dropdown">
-                            <li><a href="/adventskalender/">Adventskalender</a></li>
                             <li><a href="/adventskalendergeschichte-2014/">Adventskalendergeschichte – Durchstarter</a></li>
                             <li><a href="/adventskalendergeschichte-2007-eine-kreuzfahrt-die-karibik/">Adventskalendergeschichte – Kreuzfahrt</a></li>
                             <li><a href="/adventskalendergeschichte-2006-pleiten-pech-und-pannen-im-weihnachtsdorf/">Adventskalendergeschichte – Pleiten, Pech, Pannen</a></li>

@@ -31,7 +31,14 @@ Route::get('/fuer/{audience:slug}', [AudienceController::class, 'show']);
 Route::get('/weihnachtsgeschenke', [GiftCategoryController::class, 'index']);
 Route::get('/weihnachtsgeschenke/{giftCategory:slug}', [GiftCategoryController::class, 'show']);
 
-Route::get('/adventskalendergeschichten', [AdventCalendarController::class, 'index']);
+// Lives at "/adventskalender/", not "/adventskalendergeschichten/" - that
+// slug was the interactive calendar's original 2026-09-10 URL, but "-geschichten"
+// (stories) misdescribes a door-opening mechanism that isn't a narrative
+// itself, unlike the three actual year-story posts. Moved onto the existing
+// "Adventskalender" Page's URL instead (see AdventCalendarController, which
+// now also renders that Page's own intro content below the door grid) - the
+// old URL 301s here via a Redirect row (see ConsolidateAdventCalendarUrl).
+Route::get('/adventskalender', [AdventCalendarController::class, 'index']);
 
 // "weihnachtsgeschichten" is both a post category (root archive) and a
 // product taxonomy (nested media-type archives beneath the same base path)
@@ -70,7 +77,13 @@ Route::get('/{slug}', function (string $slug) use ($redirectOrAbort) {
         return app(PageController::class)->show($page);
     }
 
-    if ($category = Category::where('slug', $slug)->whereNull('parent_id')->first()) {
+    // "adventskalendergeschichten" is excluded here too, not just in
+    // StaticSiteExporter: this Category row is deliberately kept in the DB
+    // (see the exporter's matching comment) but the URL itself is fully
+    // retired now (redirects to "/adventskalender/") - without this, the
+    // still-existing row would resurrect the old 3-post archive live, since
+    // this check runs before the Redirect fallback below.
+    if ($slug !== 'adventskalendergeschichten' && $category = Category::where('slug', $slug)->whereNull('parent_id')->first()) {
         return app(CategoryController::class)->show($category);
     }
 
