@@ -43,7 +43,23 @@ class FormatAdvent2014Story extends Command
         }
 
         if (! str_contains($post->body_html, '<a name=')) {
-            $this->info('adventskalendergeschichte-durchstarter already formatted, skipping.');
+            // Already formatted, but an earlier run of this command could
+            // still have left two image-only paragraphs adjacent with no
+            // text between them (see clearImageCollisions()) - fix that in
+            // place rather than re-deriving from the raw WXR content, which
+            // would blow away any hand-fixed body_html since
+            // import:wordpress always re-imports from the raw export.
+            $blocks = explode("\n", trim($post->body_html));
+            $blocks = $this->removeLeadingHeaderImage($blocks);
+            $fixed = implode("\n", $this->clearImageCollisions($blocks));
+
+            if ($fixed !== $post->body_html) {
+                $post->body_html = $fixed;
+                $post->save();
+                $this->info('Fixed an adjacent-image float collision in the already-formatted story.');
+            } else {
+                $this->info('adventskalendergeschichte-durchstarter already formatted, skipping.');
+            }
 
             return self::SUCCESS;
         }
@@ -128,10 +144,65 @@ class FormatAdvent2014Story extends Command
             return '<p>'.$line.'</p>';
         }, $lines));
 
-        $post->body_html = implode("\n", $paragraphs);
+        $paragraphs = $this->removeLeadingHeaderImage($paragraphs);
+        $post->body_html = implode("\n", $this->clearImageCollisions($paragraphs));
         $post->save();
         $this->info('Reformatted the 2014 Advent calendar story into proper paragraphs.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The post's opening paragraph carries a second decorative photo of the
+     * felt Advent calendar (labelled "Türchen 16" in the original WordPress
+     * media library) ahead of the real day-by-day sequence, which starts
+     * separately at "Türchen 1" once the first day-anchor is reached later
+     * in the content. "16" out of order right next to the intro reads as a
+     * mistake rather than intentional header art, and it's what collided
+     * with "Türchen 1" in the first place (see clearImageCollisions()) - so
+     * drop just that leading image and keep the intro paragraph's own text.
+     * The real "Türchen 16" photo still appears later, in its correct
+     * chronological position, and is untouched by this.
+     *
+     * @param  array<int, string>  $blocks
+     * @return array<int, string>
+     */
+    private function removeLeadingHeaderImage(array $blocks): array
+    {
+        $firstKey = array_key_first($blocks);
+
+        if ($firstKey !== null && preg_match('/^<p><img class="alignleft"[^>]*>(.*)$/', $blocks[$firstKey], $m)) {
+            $blocks[$firstKey] = '<p>'.$m[1];
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * Two image-only paragraphs in a row have nothing between them to force
+     * a line break, so both alignleft floats sit side by side instead of
+     * stacking - this squeezes whatever paragraph text follows into an
+     * unreadably narrow column (one character per line). Give every
+     * image-only paragraph after the first in such a run a clear-left, so
+     * it drops below the previous one instead.
+     *
+     * @param  array<int, string>  $blocks
+     * @return array<int, string>
+     */
+    private function clearImageCollisions(array $blocks): array
+    {
+        $previousWasImageOnly = false;
+
+        foreach ($blocks as &$block) {
+            $isImageOnly = (bool) preg_match('/^<p><img class="alignleft"/', $block);
+
+            if ($isImageOnly && $previousWasImageOnly && ! str_contains($block, 'clear:')) {
+                $block = preg_replace('/^<p><img class="alignleft"/', '<p><img class="alignleft" style="clear: left;"', $block, 1);
+            }
+
+            $previousWasImageOnly = $isImageOnly;
+        }
+
+        return $blocks;
     }
 }
