@@ -22,13 +22,15 @@
          (it's the mechanism that presents the consent choice itself), per
          the Datenschutzerklärung's "Einwilligung mit CCM19" section. --}}
     <script src="https://cloud.ccm19.de/app.js?apiKey=eb7f18c6197e9181ed530ce7629bfb2086e19e2f9cf1b0d2&amp;domain=6a996941725bc70f7d03c072" referrerpolicy="origin"></script>
-    {{-- Google Tag Manager - must stay after the CCM19 script above: CCM19 pushes
-         its consent-mode signals to dataLayer, and GTM/GA only respect them if
-         they're already present when GTM's own tags read the dataLayer. GTM
-         itself is registered in the CCM19 dashboard as "technisch notwendig" (it's
-         only a loader), so it isn't blocked; the individual tags configured inside
-         it respect the visitor's actual consent choice via Consent Mode. --}}
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    {{-- Google Tag Manager - blocked from executing until the visitor consents
+         to "Statistik" in CCM19: type="text/x-ccm-loader" stops the browser
+         from running this as JS at all, and CCM19 only swaps it back to a real
+         script (by data-ccm-loader-group) once that consent is granted. This
+         requires a matching integration entry in the CCM19 dashboard
+         (Einbindungen & Cookies) with "Gruppe für den Skript-Loader" set to
+         exactly "google-tag-manager", category Statistik - without that entry
+         CCM19 has nothing telling it to ever release this script. --}}
+    <script type="text/x-ccm-loader" data-ccm-loader-group="google-tag-manager">(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
@@ -339,10 +341,6 @@
     </style>
 </head>
 <body>
-    {{-- Google Tag Manager (noscript) --}}
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MTW9RM2"
-    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    {{-- End Google Tag Manager (noscript) --}}
     <a class="skip-link" href="#main">Zum Inhalt springen</a>
     <header class="site">
         <div class="bar">
